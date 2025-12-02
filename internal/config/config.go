@@ -34,8 +34,12 @@ func (c *Config) GetConnectionString() string {
 }
 
 func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
+
+	value := os.Getenv(key)
+
+	if value != "" {
 		return value
 	}
+	
 	return defaultValue
 }

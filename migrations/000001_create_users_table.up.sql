@@ -1,7 +1,9 @@
 CREATE TABLE users (
                        id INT IDENTITY(1,1) PRIMARY KEY,
                        username NVARCHAR(255) NOT NULL UNIQUE,
-                       hashed_password NVARCHAR(255) NOT NULL,
+                       email NVARCHAR(255) NOT NULL UNIQUE,
+                       password NVARCHAR(255) NOT NULL,
+                       is_admin BIT NOT NULL DEFAULT 0,
                        session_token NVARCHAR(255),
                        csrf_token NVARCHAR(255),
                        created_at DATETIME2 DEFAULT GETDATE(),
@@ -9,4 +11,5 @@ CREATE TABLE users (
 );
 
 CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_session_token ON users(session_token);

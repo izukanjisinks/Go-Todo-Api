@@ -16,7 +16,9 @@ type UsersHandler struct {
 
 type RegisterRequest struct {
 	Username string `json:"username"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
+	IsAdmin  bool   `json:"is_admin"`
 }
 
 type LoginRequest struct {
@@ -49,9 +51,11 @@ func (h *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	username := req.Username
+	email := req.Email
 	password := req.Password
+	isAdmin := req.IsAdmin
 
-	if username == "" || password == "" {
+	if username == "" || email == "" || password == "" {
 		er := http.StatusBadRequest
 		http.Error(w, "Invalid input", er)
 		return
@@ -66,10 +70,12 @@ func (h *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	newUser := &models.User{
 		Username: username,
+		Email:    email,
+		IsAdmin:  isAdmin,
 		Login: models.Login{
-			HashedPassword: hashedPassword,
-			SessionToken:   "",
-			CSRFToken:      "",
+			Password:     hashedPassword,
+			SessionToken: "",
+			CSRFToken:    "",
 		},
 	}
 
@@ -111,7 +117,7 @@ func (h *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if utils.ComparePasswords(user.HashedPassword, password) != nil || (user.HashedPassword == "" && password != "") {
+	if utils.ComparePasswords(user.Password, password) != nil || (user.Password == "" && password != "") {
 		er := http.StatusUnauthorized
 		http.Error(w, "Invalid user credentails entered", er)
 		return

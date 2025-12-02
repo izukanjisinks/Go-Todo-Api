@@ -1,0 +1,3 @@
+#nothing to ignore here
+
+#.env # Ignores .env in any directory
