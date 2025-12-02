@@ -8,6 +8,8 @@ import (
 	"todo-api/internal/models"
 	"todo-api/internal/repository"
 	"todo-api/pkg/utils"
+
+	"github.com/google/uuid"
 )
 
 type UsersHandler struct {
@@ -69,6 +71,7 @@ func (h *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 	hashedPassword, _ := utils.HashPassword(password)
 
 	newUser := &models.User{
+		UserID:   uuid.New().String(),
 		Username: username,
 		Email:    email,
 		IsAdmin:  isAdmin,
@@ -169,7 +172,7 @@ func (h *UsersHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
 
 func Logout(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
-	
+
 	// Clear cookies
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_token",

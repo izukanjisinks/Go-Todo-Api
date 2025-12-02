@@ -30,6 +30,7 @@ func main() {
 	todoHandler := handlers.NewTodoHandler()
 	userHandler := handlers.NewUserRepository()
 	sharedTaskHandler := handlers.NewSharedTaskHandler()
+	todoWorkflowHandler := handlers.NewTodoWorkflowHandler()
 
 	// Setup routes
 	http.HandleFunc("/health", middleware.CORS(handlers.HealthHandler))
@@ -46,6 +47,15 @@ func main() {
 	http.HandleFunc("/shared-tasks/owner", middleware.CORS(sharedTaskHandler.GetSharedTasksByOwnerId))
 	http.HandleFunc("/shared-tasks/id", middleware.CORS(sharedTaskHandler.GetSharedTasksById))
 	http.HandleFunc("/shared-tasks/todo", middleware.CORS(sharedTaskHandler.GetSharedTasksByTodoId))
+
+	// Workflow routes
+	http.HandleFunc("POST /workflow/todos", middleware.CORS(todoWorkflowHandler.CreateTodoTask))
+	http.HandleFunc("GET /workflow/todos/user", middleware.CORS(todoWorkflowHandler.GetTodosByUser))
+	http.HandleFunc("GET /workflow/todos/status", middleware.CORS(todoWorkflowHandler.GetTodosByStatus))
+	http.HandleFunc("POST /workflow/todos/{id}/submit/{submitted_by}", middleware.CORS(todoWorkflowHandler.SubmitForReview))
+	http.HandleFunc("POST /workflow/todos/{id}/approve/{approved_by}", middleware.CORS(todoWorkflowHandler.ApproveTodo))
+	http.HandleFunc("POST /workflow/todos/{id}/reject/{rejected_by}", middleware.CORS(todoWorkflowHandler.RejectTodo))
+
 	// Start server
 	port := ":" + cfg.ServerPort
 	fmt.Printf("🚀 Server listening on port %s\n", cfg.ServerPort)

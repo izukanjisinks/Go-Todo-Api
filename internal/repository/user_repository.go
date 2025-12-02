@@ -18,8 +18,8 @@ func NewUserRepository() *UserRepository {
 
 // CreateUser creates a new user in the database
 func (r *UserRepository) CreateUser(user *models.User) error {
-	query := "INSERT INTO users (username, email, password, is_admin, session_token, csrf_token) VALUES (@p1, @p2, @p3, @p4, @p5, @p6)"
-	_, err := r.db.Exec(query, user.Username, user.Email, user.Password, user.IsAdmin, user.SessionToken, user.CSRFToken)
+	query := "INSERT INTO users (id, username, email, password, is_admin, session_token, csrf_token) VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7)"
+	_, err := r.db.Exec(query, user.UserID, user.Username, user.Email, user.Password, user.IsAdmin, user.SessionToken, user.CSRFToken)
 	return err
 }
 
