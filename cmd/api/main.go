@@ -31,6 +31,8 @@ func main() {
 	userHandler := handlers.NewUserRepository()
 	sharedTaskHandler := handlers.NewSharedTaskHandler()
 	todoWorkflowHandler := handlers.NewTodoWorkflowHandler()
+	workflowAdminHandler := handlers.NewWorkflowAdminHandler()
+	workflowInstanceHandler := handlers.NewWorkflowInstanceHandler()
 
 	// Setup routes
 	http.HandleFunc("/health", middleware.CORS(handlers.HealthHandler))
@@ -48,13 +50,31 @@ func main() {
 	http.HandleFunc("/shared-tasks/id", middleware.CORS(sharedTaskHandler.GetSharedTasksById))
 	http.HandleFunc("/shared-tasks/todo", middleware.CORS(sharedTaskHandler.GetSharedTasksByTodoId))
 
-	// Workflow routes
+	// Workflow routes (old hardcoded workflow)
 	http.HandleFunc("POST /workflow/todos", middleware.CORS(todoWorkflowHandler.CreateTodoTask))
 	http.HandleFunc("GET /workflow/todos/user", middleware.CORS(todoWorkflowHandler.GetTodosByUser))
 	http.HandleFunc("GET /workflow/todos/status", middleware.CORS(todoWorkflowHandler.GetTodosByStatus))
 	http.HandleFunc("POST /workflow/todos/{id}/submit/{submitted_by}", middleware.CORS(todoWorkflowHandler.SubmitForReview))
 	http.HandleFunc("POST /workflow/todos/{id}/approve/{approved_by}", middleware.CORS(todoWorkflowHandler.ApproveTodo))
 	http.HandleFunc("POST /workflow/todos/{id}/reject/{rejected_by}", middleware.CORS(todoWorkflowHandler.RejectTodo))
+
+	// Dynamic Workflow Admin routes (for creating workflows, steps, transitions)
+	http.HandleFunc("POST /api/workflows", middleware.CORS(workflowAdminHandler.CreateWorkflow))
+	http.HandleFunc("GET /api/workflows", middleware.CORS(workflowAdminHandler.GetAllWorkflows))
+	http.HandleFunc("GET /api/workflows/{id}", middleware.CORS(workflowAdminHandler.GetWorkflow))
+	http.HandleFunc("POST /api/workflows/{workflow_id}/steps", middleware.CORS(workflowAdminHandler.CreateStep))
+	http.HandleFunc("GET /api/workflows/{workflow_id}/steps", middleware.CORS(workflowAdminHandler.GetWorkflowSteps))
+	http.HandleFunc("POST /api/workflows/{workflow_id}/transitions", middleware.CORS(workflowAdminHandler.CreateTransition))
+	http.HandleFunc("GET /api/workflows/{workflow_id}/transitions", middleware.CORS(workflowAdminHandler.GetWorkflowTransitions))
+
+	// Dynamic Workflow Instance routes (for running tasks through workflows)
+	http.HandleFunc("POST /api/tasks", middleware.CORS(workflowInstanceHandler.StartTask))
+	http.HandleFunc("GET /api/tasks/{instance_id}", middleware.CORS(workflowInstanceHandler.GetTask))
+	http.HandleFunc("POST /api/tasks/{instance_id}/execute", middleware.CORS(workflowInstanceHandler.ExecuteAction))
+	http.HandleFunc("GET /api/tasks/{instance_id}/actions", middleware.CORS(workflowInstanceHandler.GetAvailableActions))
+	http.HandleFunc("GET /api/tasks/{instance_id}/history", middleware.CORS(workflowInstanceHandler.GetTaskHistory))
+	http.HandleFunc("GET /api/tasks/user", middleware.CORS(workflowInstanceHandler.GetTasksByUser))
+	http.HandleFunc("GET /api/workflows/{workflow_id}/tasks", middleware.CORS(workflowInstanceHandler.GetTasksByWorkflow))
 
 	// Start server
 	port := ":" + cfg.ServerPort
