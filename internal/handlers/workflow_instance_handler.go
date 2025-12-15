@@ -40,11 +40,11 @@ func (h *WorkflowInstanceHandler) StartTask(w http.ResponseWriter, r *http.Reque
 	}
 
 	if req.WorkflowID == "" || req.AssignedTo == "" || req.TodoId == "" {
-		utils.RespondError(w, http.StatusBadRequest, "workflow_id, title, assigned_to, and created_by are required")
+		utils.RespondError(w, http.StatusBadRequest, "workflow_id, assigned_to, and todo_id are required")
 		return
 	}
 
-	instance, err := h.engine.StartWorkflow(req.WorkflowID, req.Title, req.Description, req.TaskData, req.AssignedTo, req.CreatedBy)
+	instance, err := h.engine.StartWorkflow(req.WorkflowID, req.AssignedTo)
 	if err != nil {
 		utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return

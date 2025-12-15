@@ -22,7 +22,7 @@ func NewWorkflowEngine() *WorkflowEngine {
 }
 
 // StartWorkflow creates a new workflow instance at the start step
-func (e *WorkflowEngine) StartWorkflow(workflowID, title, description, taskData, assignedTo, createdBy string) (*models.AssignedTodo, error) {
+func (e *WorkflowEngine) StartWorkflow(workflowID, assignedTo string) (*models.AssignedTodo, error) {
 	// Get workflow to ensure it exists and is active
 	workflow, err := e.workflowRepo.GetWorkflow(workflowID)
 	if err != nil {

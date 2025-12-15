@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 	"todo-api/internal/models"
 	"todo-api/internal/repository"
 	"todo-api/pkg/utils"
@@ -59,26 +58,40 @@ func (h *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	if username == "" || email == "" || password == "" {
 		er := http.StatusBadRequest
-		http.Error(w, "Invalid input", er)
+		http.Error(w, "Invalid input, username, email and password are required", er)
 		return
 	}
 
-	if _, ok := users[username]; ok {
-		er := http.StatusConflict
-		http.Error(w, "Username already exists", er)
+	// Check if username already exists
+	usernameExists, err := h.repo.UserExists(username)
+	if err != nil {
+		http.Error(w, "Error checking username", http.StatusInternalServerError)
+		return
+	}
+	if usernameExists {
+		http.Error(w, "Username already exists", http.StatusConflict)
+		return
+	}
+
+	// Check if email already exists
+	emailExists, err := h.repo.EmailExists(email)
+	if err != nil {
+		http.Error(w, "Error checking email", http.StatusInternalServerError)
+		return
+	}
+	if emailExists {
+		http.Error(w, "Email already exists", http.StatusConflict)
 		return
 	}
 	hashedPassword, _ := utils.HashPassword(password)
 
 	newUser := &models.User{
-		UserID:   uuid.New().String(),
+		UserID:   uuid.New(),
 		Username: username,
 		Email:    email,
 		IsAdmin:  isAdmin,
 		Login: models.Login{
-			Password:     hashedPassword,
-			SessionToken: "",
-			CSRFToken:    "",
+			Password: hashedPassword,
 		},
 	}
 
@@ -112,8 +125,6 @@ func (h *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 	username := req.Username
 	password := req.Password
 
-	fmt.Println(username, password)
-
 	user, err := h.repo.GetUserByUsername(username)
 
 	if err != nil {
@@ -128,34 +139,23 @@ func (h *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessionToken := utils.GenerateSessionToken(32)
-	csrfToken := utils.GenerateSessionToken(32)
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     "csrf_token",
-		Value:    csrfToken,
-		Expires:  time.Now().Add(24 * time.Hour),
-		HttpOnly: false,
-	})
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session_token",
-		Value:    sessionToken,
-		Expires:  time.Now().Add(24 * time.Hour),
-		HttpOnly: true,
-	})
-
-	//store tokens
-	user.SessionToken = sessionToken
-	user.CSRFToken = csrfToken
-
-	err = h.repo.UpdateUserTokens(username, sessionToken, csrfToken)
-
+	// Generate JWT token
+	token, err := utils.GenerateToken(user.Email, user.UserID)
 	if err != nil {
+		utils.RespondError(w, http.StatusInternalServerError, "Error generating authentication token")
 		return
 	}
 
-	utils.RespondJSON(w, http.StatusOK, user)
+	// Return JWT token in response
+	response := map[string]interface{}{
+		"token":    token,
+		"user_id":  user.UserID,
+		"username": user.Username,
+		"email":    user.Email,
+		"is_admin": user.IsAdmin,
+	}
+
+	utils.RespondJSON(w, http.StatusOK, response)
 }
 
 func (h *UsersHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
@@ -172,62 +172,53 @@ func (h *UsersHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
 	utils.RespondJSON(w, http.StatusOK, users)
 }
 
-func Logout(w http.ResponseWriter, r *http.Request) {
-	username := r.FormValue("username")
-
-	// Clear cookies
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session_token",
-		Value:    "",
-		Expires:  time.Now().Add(-24 * time.Hour),
-		HttpOnly: true,
-	})
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     "csrf_token",
-		Value:    "",
-		Expires:  time.Now().Add(-24 * time.Hour),
-		HttpOnly: false,
-	})
-
-	// Clear tokens from database
-	if username != "" {
-		userHandler := NewUserRepository()
-		userHandler.repo.UpdateUserTokens(username, "", "")
+func (h *UsersHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		utils.RespondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
 	}
 
-	utils.RespondJSON(w, http.StatusOK, map[string]string{"message": "logged out successfully"})
+	user := &models.User{}
+
+	if err := utils.DecodeJson(r, user); err != nil {
+		utils.RespondError(w, http.StatusBadRequest, "Invalid JSON")
+		return
+	}
+
+	result, err := h.repo.UpdateUser(user)
+
+	if err != nil {
+		utils.RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	utils.RespondJSON(w, http.StatusOK, result)
 }
 
+// Logout - With JWT, logout is handled client-side by removing the token
+// This endpoint is kept for API consistency but doesn't need to do much
+func Logout(w http.ResponseWriter, r *http.Request) {
+	// With JWT, the client simply discards the token
+	// Optionally, you could implement a token blacklist here for added security
+	utils.RespondJSON(w, http.StatusOK, map[string]string{
+		"message": "Logged out successfully.",
+	})
+}
+
+// Protected - Example protected endpoint using JWT authentication
+// Note: This should be wrapped with the JWTAuth middleware in your router
 func Protected(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		utils.RespondError(w, http.StatusMethodNotAllowed, "Invalid method")
+	// Extract user info from context (set by JWTAuth middleware)
+	userID, ok := r.Context().Value("userID").(uuid.UUID)
+	if !ok {
+		utils.RespondError(w, http.StatusUnauthorized, "User not authenticated")
 		return
 	}
 
-	username := r.FormValue("username")
+	email, _ := r.Context().Value("userEmail").(string)
 
-	// Get session token from cookie
-	st, err := r.Cookie("session_token")
-	if err != nil || st.Value == "" {
-		utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
-		return
-	}
-
-	// Verify with database
-	userHandler := NewUserRepository()
-	user, err := userHandler.repo.GetUserByUsername(username)
-	if err != nil || user.SessionToken != st.Value {
-		utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
-		return
-	}
-
-	// Verify CSRF token if provided
-	csrf := r.Header.Get("X-CSRF-Token")
-	if csrf != "" && csrf != user.CSRFToken {
-		utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
-		return
-	}
-
-	utils.RespondJSON(w, http.StatusOK, map[string]string{"message": username + " welcome to the protected resource"})
+	utils.RespondJSON(w, http.StatusOK, map[string]interface{}{
+		"message": "Welcome to the protected resource",
+		"user_id": userID,
+		"email":   email,
+	})
 }
