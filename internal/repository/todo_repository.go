@@ -80,7 +80,7 @@ func (r *TodoRepository) Delete(id string) (int64, error) {
 	return rowsAffected, err
 }
 
-func (r *TodoRepository) GetByUserId(userID int) ([]models.Todo, error) {
+func (r *TodoRepository) GetByUserId(userID string) ([]models.Todo, error) {
 	rows, err := r.db.Query(`SELECT CAST(id AS VARCHAR(36)), task_name, task_description, completed, user_id, created_at, updated_at FROM todos WHERE user_id = @p1`, userID)
 	if err != nil {
 		return nil, err

@@ -37,16 +37,13 @@ type WorkflowTransition struct {
 	CreatedAt      time.Time `json:"created_at"`
 }
 
-// WorkflowInstance represents a task running through a workflow
-type WorkflowInstance struct {
+//this basically refers to an instance in the workflow
+type AssignedTodo struct {
 	ID            string    `json:"id"`
-	WorkflowID    string    `json:"workflow_id"`
-	CurrentStepID string    `json:"current_step_id"`
-	Title         string    `json:"title"`
-	Description   string    `json:"description"`
-	TaskData      string    `json:"task_data"` // JSON for additional fields
+	WorkflowId    string    `json:"workflow_id"`
+	CurrentStepId string    `json:"current_step_id"`
+	TodoId        string    `json:"todo_id"`
 	AssignedTo    string    `json:"assigned_to"`
-	CreatedBy     string    `json:"created_by"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 }
@@ -72,7 +69,7 @@ type AvailableAction struct {
 
 // WorkflowInstanceWithDetails includes current step information
 type WorkflowInstanceWithDetails struct {
-	WorkflowInstance
+	AssignedTodo
 	CurrentStepName  string            `json:"current_step_name"`
 	WorkflowName     string            `json:"workflow_name"`
 	AvailableActions []AvailableAction `json:"available_actions"`

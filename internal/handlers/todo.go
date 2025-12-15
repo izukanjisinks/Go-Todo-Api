@@ -163,12 +163,7 @@ func (h *TodoHandler) GetTodosByUserId(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert user_id to int
-	var userID int
-	_, err := fmt.Sscanf(userIDStr, "%d", &userID)
-	if err != nil {
-		utils.RespondError(w, http.StatusBadRequest, "Invalid user_id format")
-		return
-	}
+	userID := userIDStr
 
 	// Get todos from repository
 	todos, err := h.repo.GetByUserId(userID)

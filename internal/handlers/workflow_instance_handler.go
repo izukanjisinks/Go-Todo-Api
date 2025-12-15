@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 	"todo-api/internal/repository"
 	"todo-api/internal/services"
 	"todo-api/pkg/utils"
@@ -24,12 +25,12 @@ func NewWorkflowInstanceHandler() *WorkflowInstanceHandler {
 // StartTask creates a new workflow instance
 func (h *WorkflowInstanceHandler) StartTask(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		WorkflowID  string `json:"workflow_id"`
-		Title       string `json:"title"`
-		Description string `json:"description"`
-		TaskData    string `json:"task_data"` // JSON string for additional fields
-		AssignedTo  string `json:"assigned_to"`
-		CreatedBy   string `json:"created_by"`
+		WorkflowID    string    `json:"workflow_id"`
+		AssignedTo    string    `json:"assigned_to"`
+		CurrentStepId string    `json:"current_step_id"`
+		TodoId        string    `json:"todo_id"`
+		UpdatedAt     time.Time `json:"updated_at"`
+		CreatedAt     time.Time `json:"created_at"`
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -38,7 +39,7 @@ func (h *WorkflowInstanceHandler) StartTask(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if req.WorkflowID == "" || req.Title == "" || req.AssignedTo == "" || req.CreatedBy == "" {
+	if req.WorkflowID == "" || req.AssignedTo == "" || req.TodoId == "" {
 		utils.RespondError(w, http.StatusBadRequest, "workflow_id, title, assigned_to, and created_by are required")
 		return
 	}
@@ -134,23 +135,6 @@ func (h *WorkflowInstanceHandler) GetAvailableActions(w http.ResponseWriter, r *
 	}
 
 	utils.RespondJSON(w, http.StatusOK, actions)
-}
-
-// GetTaskHistory retrieves the history of a task
-func (h *WorkflowInstanceHandler) GetTaskHistory(w http.ResponseWriter, r *http.Request) {
-	instanceID := r.PathValue("instance_id")
-	if instanceID == "" {
-		utils.RespondError(w, http.StatusBadRequest, "Instance ID is required")
-		return
-	}
-
-	history, err := h.instanceRepo.GetInstanceHistory(instanceID)
-	if err != nil {
-		utils.RespondError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	utils.RespondJSON(w, http.StatusOK, history)
 }
 
 // GetTasksByUser retrieves all tasks assigned to a user

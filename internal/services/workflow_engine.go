@@ -22,7 +22,7 @@ func NewWorkflowEngine() *WorkflowEngine {
 }
 
 // StartWorkflow creates a new workflow instance at the start step
-func (e *WorkflowEngine) StartWorkflow(workflowID, title, description, taskData, assignedTo, createdBy string) (*models.WorkflowInstance, error) {
+func (e *WorkflowEngine) StartWorkflow(workflowID, title, description, taskData, assignedTo, createdBy string) (*models.AssignedTodo, error) {
 	// Get workflow to ensure it exists and is active
 	workflow, err := e.workflowRepo.GetWorkflow(workflowID)
 	if err != nil {
@@ -40,15 +40,11 @@ func (e *WorkflowEngine) StartWorkflow(workflowID, title, description, taskData,
 	}
 
 	// Create the instance
-	instance := &models.WorkflowInstance{
+	instance := &models.AssignedTodo{
 		ID:            uuid.New().String(),
-		WorkflowID:    workflowID,
-		CurrentStepID: startStep.ID,
-		Title:         title,
-		Description:   description,
-		TaskData:      taskData,
+		WorkflowId:    workflowID,
+		CurrentStepId: startStep.ID,
 		AssignedTo:    assignedTo,
-		CreatedBy:     createdBy,
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
 	}
@@ -56,23 +52,6 @@ func (e *WorkflowEngine) StartWorkflow(workflowID, title, description, taskData,
 	err = e.instanceRepo.CreateInstance(instance)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create instance: %w", err)
-	}
-
-	// Create initial history record
-	history := &models.WorkflowHistory{
-		ID:          uuid.New().String(),
-		InstanceID:  instance.ID,
-		FromStepID:  nil, // No previous step
-		ToStepID:    startStep.ID,
-		ActionTaken: "created",
-		PerformedBy: createdBy,
-		Comments:    "Workflow instance created",
-		Timestamp:   time.Now(),
-	}
-
-	err = e.instanceRepo.CreateHistory(history)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create history: %w", err)
 	}
 
 	return instance, nil
@@ -87,7 +66,7 @@ func (e *WorkflowEngine) ExecuteTransition(instanceID, actionName, userID, comme
 	}
 
 	// Find the transition
-	transition, err := e.workflowRepo.FindTransition(instance.WorkflowID, instance.CurrentStepID, actionName)
+	transition, err := e.workflowRepo.FindTransition(instance.WorkflowId, instance.CurrentStepId, actionName)
 	if err != nil {
 		return fmt.Errorf("invalid action for current step: %w", err)
 	}
@@ -102,27 +81,9 @@ func (e *WorkflowEngine) ExecuteTransition(instanceID, actionName, userID, comme
 	}
 
 	// Execute the transition
-	oldStepID := instance.CurrentStepID
 	err = e.instanceRepo.UpdateInstanceStep(instanceID, transition.ToStepID)
 	if err != nil {
 		return fmt.Errorf("failed to update instance step: %w", err)
-	}
-
-	// Create history record
-	history := &models.WorkflowHistory{
-		ID:          uuid.New().String(),
-		InstanceID:  instanceID,
-		FromStepID:  &oldStepID,
-		ToStepID:    transition.ToStepID,
-		ActionTaken: actionName,
-		PerformedBy: userID,
-		Comments:    comments,
-		Timestamp:   time.Now(),
-	}
-
-	err = e.instanceRepo.CreateHistory(history)
-	if err != nil {
-		return fmt.Errorf("failed to create history: %w", err)
 	}
 
 	// Check if we reached an end step
@@ -136,16 +97,12 @@ func (e *WorkflowEngine) ExecuteTransition(instanceID, actionName, userID, comme
 }
 
 // ValidateTransition checks if a user can perform a transition
-func (e *WorkflowEngine) ValidateTransition(instance *models.WorkflowInstance, transition *models.WorkflowTransition, userID string) (bool, error) {
+func (e *WorkflowEngine) ValidateTransition(instance *models.AssignedTodo, transition *models.WorkflowTransition, userID string) (bool, error) {
 	// Check condition type
 	switch transition.ConditionType {
 	case "assigned_user_only":
 		// Only the assigned user can perform this action
 		return instance.AssignedTo == userID, nil
-
-	case "creator_only":
-		// Only the creator can perform this action
-		return instance.CreatedBy == userID, nil
 
 	case "not_assigned_user":
 		// Anyone except the assigned user (e.g., for approval by someone else)
@@ -174,7 +131,7 @@ func (e *WorkflowEngine) GetAvailableActions(instanceID, userID string) ([]model
 	}
 
 	// Get available transitions from current step
-	transitions, err := e.workflowRepo.GetAvailableTransitions(instance.WorkflowID, instance.CurrentStepID)
+	transitions, err := e.workflowRepo.GetAvailableTransitions(instance.WorkflowId, instance.CurrentStepId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get transitions: %w", err)
 	}
@@ -212,13 +169,13 @@ func (e *WorkflowEngine) GetInstanceWithDetails(instanceID, userID string) (*mod
 	}
 
 	// Get current step
-	currentStep, err := e.workflowRepo.GetStep(instance.CurrentStepID)
+	currentStep, err := e.workflowRepo.GetStep(instance.CurrentStepId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current step: %w", err)
 	}
 
 	// Get workflow
-	workflow, err := e.workflowRepo.GetWorkflow(instance.WorkflowID)
+	workflow, err := e.workflowRepo.GetWorkflow(instance.WorkflowId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workflow: %w", err)
 	}
@@ -230,7 +187,7 @@ func (e *WorkflowEngine) GetInstanceWithDetails(instanceID, userID string) (*mod
 	}
 
 	return &models.WorkflowInstanceWithDetails{
-		WorkflowInstance: *instance,
+		AssignedTodo:     *instance,
 		CurrentStepName:  currentStep.StepName,
 		WorkflowName:     workflow.Name,
 		AvailableActions: actions,

@@ -84,6 +84,8 @@ func (h *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	err = h.repo.CreateUser(newUser)
 
+	fmt.Println("error encountered: ", err)
+
 	if err != nil {
 		http.Error(w, "Failed to create user in database", http.StatusInternalServerError)
 		return
