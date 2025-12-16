@@ -4,15 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"todo-api/internal/interfaces"
 	"todo-api/internal/models"
-	"todo-api/internal/repository"
 	"todo-api/pkg/utils"
 
 	"github.com/google/uuid"
 )
 
 type UsersHandler struct {
-	repo *repository.UserRepository
+	service interfaces.UserInterface
 }
 
 type RegisterRequest struct {
@@ -23,17 +23,15 @@ type RegisterRequest struct {
 }
 
 type LoginRequest struct {
-	Username string `json:"username"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
-func NewUserRepository() *UsersHandler {
+func NewUsersHandler(service interfaces.UserInterface) *UsersHandler {
 	return &UsersHandler{
-		repo: repository.NewUserRepository(),
+		service: service,
 	}
 }
-
-var users = map[string]models.User{}
 
 func (h *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 
@@ -57,50 +55,22 @@ func (h *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 	isAdmin := req.IsAdmin
 
 	if username == "" || email == "" || password == "" {
-		er := http.StatusBadRequest
-		http.Error(w, "Invalid input, username, email and password are required", er)
+		utils.RespondError(w, http.StatusBadRequest, "Invalid input, username, email and password are required")
 		return
 	}
-
-	// Check if username already exists
-	usernameExists, err := h.repo.UserExists(username)
-	if err != nil {
-		http.Error(w, "Error checking username", http.StatusInternalServerError)
-		return
-	}
-	if usernameExists {
-		http.Error(w, "Username already exists", http.StatusConflict)
-		return
-	}
-
-	// Check if email already exists
-	emailExists, err := h.repo.EmailExists(email)
-	if err != nil {
-		http.Error(w, "Error checking email", http.StatusInternalServerError)
-		return
-	}
-	if emailExists {
-		http.Error(w, "Email already exists", http.StatusConflict)
-		return
-	}
-	hashedPassword, _ := utils.HashPassword(password)
 
 	newUser := &models.User{
-		UserID:   uuid.New(),
 		Username: username,
 		Email:    email,
 		IsAdmin:  isAdmin,
 		Login: models.Login{
-			Password: hashedPassword,
+			Password: password,
 		},
 	}
 
-	err = h.repo.CreateUser(newUser)
-
-	fmt.Println("error encountered: ", err)
-
+	err = h.service.Register(newUser)
 	if err != nil {
-		http.Error(w, "Failed to create user in database", http.StatusInternalServerError)
+		utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -122,37 +92,13 @@ func (h *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	username := req.Username
+	email := req.Email
 	password := req.Password
 
-	user, err := h.repo.GetUserByUsername(username)
-
+	response, err := h.service.Login(email, password)
 	if err != nil {
-		er := http.StatusUnauthorized
-		http.Error(w, "User not found", er)
+		utils.RespondError(w, http.StatusUnauthorized, err.Error())
 		return
-	}
-
-	if utils.ComparePasswords(user.Password, password) != nil || (user.Password == "" && password != "") {
-		er := http.StatusUnauthorized
-		http.Error(w, "Invalid user credentails entered", er)
-		return
-	}
-
-	// Generate JWT token
-	token, err := utils.GenerateToken(user.Email, user.UserID)
-	if err != nil {
-		utils.RespondError(w, http.StatusInternalServerError, "Error generating authentication token")
-		return
-	}
-
-	// Return JWT token in response
-	response := map[string]interface{}{
-		"token":    token,
-		"user_id":  user.UserID,
-		"username": user.Username,
-		"email":    user.Email,
-		"is_admin": user.IsAdmin,
 	}
 
 	utils.RespondJSON(w, http.StatusOK, response)
@@ -164,7 +110,7 @@ func (h *UsersHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	users, err := h.repo.GetAllUsers()
+	users, err := h.service.GetAllUsers()
 	if err != nil {
 		utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -178,19 +124,21 @@ func (h *UsersHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := &models.User{}
+	updates := &models.User{}
 
-	if err := utils.DecodeJson(r, user); err != nil {
+	if err := utils.DecodeJson(r, updates); err != nil {
 		utils.RespondError(w, http.StatusBadRequest, "Invalid JSON")
 		return
 	}
 
-	result, err := h.repo.UpdateUser(user)
+	fmt.Printf("the updates are %v", updates)
 
+	result, err := h.service.UpdateUser(updates)
 	if err != nil {
 		utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	utils.RespondJSON(w, http.StatusOK, result)
 }
 

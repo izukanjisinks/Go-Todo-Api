@@ -8,6 +8,8 @@ import (
 	"todo-api/internal/database"
 	"todo-api/internal/handlers"
 	"todo-api/internal/middleware"
+	"todo-api/internal/repository"
+	"todo-api/internal/services"
 )
 
 //var users = map[string]Login{}
@@ -33,9 +35,17 @@ func main() {
 	}
 	defer database.Close()
 
-	// Initialize handlers
-	todoHandler := handlers.NewTodoHandler()
-	userHandler := handlers.NewUserRepository()
+	// Initialize repositories
+	userRepo := repository.NewUserRepository()
+	todoRepo := repository.NewTodoRepository()
+
+	// Initialize services with repository dependencies
+	userService := services.NewUserService(userRepo)
+	todoService := services.NewTodoService(todoRepo)
+
+	// Initialize handlers with service dependencies
+	todoHandler := handlers.NewTodoHandler(todoService)
+	userHandler := handlers.NewUsersHandler(userService)
 	sharedTaskHandler := handlers.NewSharedTaskHandler()
 	todoWorkflowHandler := handlers.NewTodoWorkflowHandler()
 	workflowAdminHandler := handlers.NewWorkflowAdminHandler()
