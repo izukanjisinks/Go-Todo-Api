@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"todo-api/internal/config"
 	"todo-api/internal/database"
 	"todo-api/internal/handlers"
@@ -38,14 +39,23 @@ func main() {
 	// Initialize repositories
 	userRepo := repository.NewUserRepository()
 	todoRepo := repository.NewTodoRepository()
+	roleRepo := repository.NewRoleRepository()
 
 	// Initialize services with repository dependencies
 	userService := services.NewUserService(userRepo)
 	todoService := services.NewTodoService(todoRepo)
+	roleService := services.NewRoleService(roleRepo)
+
+	// Initialize predefined roles (run once at startup)
+	err = roleService.InitializePredefinedRoles()
+	if err != nil {
+		log.Println("Warning: Failed to initialize predefined roles:", err)
+	}
 
 	// Initialize handlers with service dependencies
 	todoHandler := handlers.NewTodoHandler(todoService)
 	userHandler := handlers.NewUsersHandler(userService)
+	roleHandler := handlers.NewRoleHandler(roleService)
 	sharedTaskHandler := handlers.NewSharedTaskHandler()
 	todoWorkflowHandler := handlers.NewTodoWorkflowHandler()
 	workflowAdminHandler := handlers.NewWorkflowAdminHandler()
@@ -70,6 +80,23 @@ func main() {
 	http.HandleFunc("/shared-tasks/owner", withAuth(sharedTaskHandler.GetSharedTasksByOwnerId))
 	http.HandleFunc("/shared-tasks/id", withAuth(sharedTaskHandler.GetSharedTasksById))
 	http.HandleFunc("/shared-tasks/todo", withAuth(sharedTaskHandler.GetSharedTasksByTodoId))
+
+	// RBAC Role Management routes - Protected (require roles:manage permission)
+	http.HandleFunc("/roles", withAuth(roleHandler.RolesHandler))
+	http.HandleFunc("/roles/", withAuth(roleHandler.RolesHandler))
+
+	// User role assignment routes - must come before /users/ to avoid conflicts
+	http.HandleFunc("/users/", func(w http.ResponseWriter, r *http.Request) {
+		// Check if it's a role assignment or permissions request
+		if strings.HasSuffix(r.URL.Path, "/role") {
+			withAuth(roleHandler.AssignRoleHandler)(w, r)
+		} else if strings.HasSuffix(r.URL.Path, "/permissions") {
+			withAuth(roleHandler.GetUserPermissionsHandler)(w, r)
+		} else {
+			// Default user handler
+			withAuth(userHandler.GetUsers)(w, r)
+		}
+	})
 
 	// Workflow routes (old hardcoded workflow) - Protected
 	http.HandleFunc("POST /workflow/todos", withAuth(todoWorkflowHandler.CreateTodoTask))

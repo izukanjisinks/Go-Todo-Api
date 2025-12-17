@@ -20,6 +20,7 @@ require (
 	github.com/golang-sql/sqlexp v0.1.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/lib/pq v1.10.9 // indirect
 	github.com/microsoft/go-mssqldb v1.9.3 // indirect
 	golang.org/x/crypto v0.43.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
