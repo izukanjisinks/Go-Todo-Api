@@ -18,16 +18,27 @@ func NewUserRepository() *UserRepository {
 
 // CreateUser creates a new user in the database
 func (r *UserRepository) CreateUser(user *models.User) error {
-	query := "INSERT INTO users (username, email, password, is_admin, session_token, csrf_token) VALUES (@p1, @p2, @p3, @p4, @p5, @p6)"
-	_, err := r.db.Exec(query, user.Username, user.Email, user.Password, user.IsAdmin, user.SessionToken, user.CSRFToken)
+	query := "INSERT INTO users (id, username, email, password, is_admin, is_active, created_at, updated_at) VALUES (@p1, @p2, @p3, @p4, @p5, @p6, GETDATE(), GETDATE())"
+	_, err := r.db.Exec(query, user.UserID, user.Username, user.Email, user.Password, user.IsAdmin, user.IsActive)
 	return err
 }
 
 // GetUserByID retrieves a user by their ID
-func (r *UserRepository) GetUserByID(id int) (*models.User, error) {
+func (r *UserRepository) GetUserByID(id interface{}) (*models.User, error) {
 	user := &models.User{}
-	query := "SELECT id, username, email, password, is_admin, session_token, csrf_token FROM users WHERE id = @p1"
-	err := r.db.QueryRow(query, id).Scan(&user.UserID, &user.Username, &user.Email, &user.Password, &user.IsAdmin, &user.SessionToken, &user.CSRFToken)
+	query := "SELECT id, username, email, password, is_admin, is_active, created_at, updated_at FROM users WHERE id = @p1"
+	err := r.db.QueryRow(query, id).Scan(&user.UserID, &user.Username, &user.Email, &user.Password, &user.IsAdmin, &user.IsActive, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+// GetUserByEmail retrieves a user by their email
+func (r *UserRepository) GetUserByEmail(email string) (*models.User, error) {
+	user := &models.User{}
+	query := `SELECT id, username, email, password, is_admin, is_active, created_at, updated_at FROM users WHERE email = @p1`
+	err := r.db.QueryRow(query, email).Scan(&user.UserID, &user.Username, &user.Email, &user.Password, &user.IsAdmin, &user.IsActive, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -37,8 +48,8 @@ func (r *UserRepository) GetUserByID(id int) (*models.User, error) {
 // GetUserByUsername retrieves a user by their username
 func (r *UserRepository) GetUserByUsername(username string) (*models.User, error) {
 	user := &models.User{}
-	query := `SELECT id, username, email, password, is_admin, session_token, csrf_token FROM users WHERE username = @p1`
-	err := r.db.QueryRow(query, username).Scan(&user.UserID, &user.Username, &user.Email, &user.Password, &user.IsAdmin, &user.SessionToken, &user.CSRFToken)
+	query := `SELECT id, username, email, password, is_admin, is_active, created_at, updated_at FROM users WHERE username = @p1`
+	err := r.db.QueryRow(query, username).Scan(&user.UserID, &user.Username, &user.Email, &user.Password, &user.IsAdmin, &user.IsActive, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +58,7 @@ func (r *UserRepository) GetUserByUsername(username string) (*models.User, error
 
 // GetAllUsers retrieves all users from the database
 func (r *UserRepository) GetAllUsers() ([]models.User, error) {
-	query := `SELECT id, username, email, password, is_admin, session_token, csrf_token FROM users`
+	query := `SELECT id, username, email, password, is_admin, is_active, created_at, updated_at FROM users`
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, err
@@ -57,7 +68,7 @@ func (r *UserRepository) GetAllUsers() ([]models.User, error) {
 	var users []models.User
 	for rows.Next() {
 		var user models.User
-		err := rows.Scan(&user.UserID, &user.Username, &user.Email, &user.Password, &user.IsAdmin, &user.SessionToken, &user.CSRFToken)
+		err := rows.Scan(&user.UserID, &user.Username, &user.Email, &user.Password, &user.IsAdmin, &user.IsActive, &user.CreatedAt, &user.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -66,25 +77,30 @@ func (r *UserRepository) GetAllUsers() ([]models.User, error) {
 	return users, nil
 }
 
-// UpdateUser updates an existing user in the database
-func (r *UserRepository) UpdateUser(user *models.User) error {
-	query := `UPDATE users SET username = @p1, email = @p2, password = @p3, is_admin = @p4, session_token = @p5, csrf_token = @p6 WHERE id = @p7`
-	_, err := r.db.Exec(query, user.Username, user.Email, user.Password, user.IsAdmin, user.SessionToken, user.CSRFToken, user.UserID)
-	return err
+// UpdateUser updates an existing user in the database and returns the updated user
+func (r *UserRepository) UpdateUser(user *models.User) (*models.User, error) {
+	query := `UPDATE users SET username = @p1, email = @p2, is_admin = @p3, is_active = @p4, updated_at = GETDATE() WHERE id = @p5`
+	_, err := r.db.Exec(query, user.Username, user.Email, user.IsAdmin, user.IsActive, user.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch and return the updated user
+	return r.GetUserByID(user.UserID)
 }
 
-// UpdateUserTokens updates only the session and CSRF tokens for a user
+// UpdateUserTokens is deprecated - JWT tokens are stateless and don't need database storage
+// Kept for backward compatibility but does nothing
 func (r *UserRepository) UpdateUserTokens(username, sessionToken, csrfToken string) error {
-	query := `UPDATE users SET session_token = @p1, csrf_token = @p2 WHERE username = @p3`
-	_, err := r.db.Exec(query, sessionToken, csrfToken, username)
-	return err
+	// No-op: JWT tokens are not stored in the database
+	return nil
 }
 
-// ClearUserTokens clears the session and CSRF tokens for a user (useful for logout)
+// ClearUserTokens is deprecated - JWT tokens are stateless
+// Kept for backward compatibility but does nothing
 func (r *UserRepository) ClearUserTokens(username string) error {
-	query := `UPDATE users SET session_token = '', csrf_token = '' WHERE username = @p1`
-	_, err := r.db.Exec(query, username)
-	return err
+	// No-op: JWT tokens are not stored in the database
+	return nil
 }
 
 // DeleteUser deletes a user from the database
@@ -96,8 +112,16 @@ func (r *UserRepository) DeleteUser(id int) error {
 
 // UserExists checks if a user with the given username exists
 func (r *UserRepository) UserExists(username string) (bool, error) {
-	var exists bool
-	query := `SELECT EXISTS(SELECT 1 FROM users WHERE username = @p1)`
-	err := r.db.QueryRow(query, username).Scan(&exists)
-	return exists, err
+	var count int
+	query := `SELECT COUNT(*) FROM users WHERE username = @p1`
+	err := r.db.QueryRow(query, username).Scan(&count)
+	return count > 0, err
+}
+
+// EmailExists checks if a user with the given email exists
+func (r *UserRepository) EmailExists(email string) (bool, error) {
+	var count int
+	query := `SELECT COUNT(*) FROM users WHERE email = @p1`
+	err := r.db.QueryRow(query, email).Scan(&count)
+	return count > 0, err
 }
