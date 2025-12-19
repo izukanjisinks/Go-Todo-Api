@@ -11,13 +11,15 @@ import (
 )
 
 type UserService struct {
-	repo *repository.UserRepository
+	repo     *repository.UserRepository
+	roleRepo *repository.RoleRepository
 }
 
 // NewUserService creates a new user service with dependency injection
 func NewUserService(repo *repository.UserRepository) *UserService {
 	return &UserService{
-		repo: repo,
+		repo:     repo,
+		roleRepo: repository.NewRoleRepository(),
 	}
 }
 
@@ -53,6 +55,16 @@ func (s *UserService) Register(user *models.User) error {
 
 	// Set user as active by default
 	user.IsActive = true
+
+	// Auto-assign default "User" role if no role is set
+	if user.RoleID == nil {
+		defaultRole, err := s.roleRepo.GetRoleByName(models.RoleUser)
+		if err == nil && defaultRole != nil {
+			user.RoleID = &defaultRole.RoleId
+		}
+		// If default role doesn't exist, user will be created without a role
+		// They can be assigned a role later by an admin
+	}
 
 	// Create the user
 	return s.repo.CreateUser(user)

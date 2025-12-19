@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  api:
+    image: todo-api:latest
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - DB_SERVER=host.docker.internal
+      - DB_TRUSTED_CONNECTION=no
+      - DB_USER=sa
+      - DB_PASSWORD=YourStrong@Passw0rd
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

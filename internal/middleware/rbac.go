@@ -12,7 +12,7 @@ func RequirePermission(permission string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Get user from context (set by auth middleware)
-			user, ok := r.Context().Value("user").(*models.User)
+			user, ok := r.Context().Value(UserKey).(*models.User)
 			if !ok || user == nil {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
@@ -33,7 +33,7 @@ func RequirePermission(permission string) func(http.Handler) http.Handler {
 func RequireAnyPermission(permissions ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			user, ok := r.Context().Value("user").(*models.User)
+			user, ok := r.Context().Value(UserKey).(*models.User)
 			if !ok || user == nil {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
@@ -62,7 +62,7 @@ func RequireAnyPermission(permissions ...string) func(http.Handler) http.Handler
 func RequireAllPermissions(permissions ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			user, ok := r.Context().Value("user").(*models.User)
+			user, ok := r.Context().Value(UserKey).(*models.User)
 			if !ok || user == nil {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
@@ -85,7 +85,7 @@ func RequireAllPermissions(permissions ...string) func(http.Handler) http.Handle
 func RequireRole(roleName string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			user, ok := r.Context().Value("user").(*models.User)
+			user, ok := r.Context().Value(UserKey).(*models.User)
 			if !ok || user == nil {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
@@ -101,14 +101,17 @@ func RequireRole(roleName string) func(http.Handler) http.Handler {
 	}
 }
 
+// PermissionsKey is the context key for storing permissions
+const PermissionsKey ContextKey = "permissions"
+
 // AttachPermissionsToContext is a helper to attach permissions to the request context
 func AttachPermissionsToContext(ctx context.Context, permissions []string) context.Context {
-	return context.WithValue(ctx, "permissions", permissions)
+	return context.WithValue(ctx, PermissionsKey, permissions)
 }
 
 // GetPermissionsFromContext retrieves permissions from the request context
 func GetPermissionsFromContext(ctx context.Context) []string {
-	permissions, ok := ctx.Value("permissions").([]string)
+	permissions, ok := ctx.Value(PermissionsKey).([]string)
 	if !ok {
 		return []string{}
 	}

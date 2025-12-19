@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"todo-api/internal/repository"
 	"todo-api/pkg/utils"
 
 	"github.com/google/uuid"
@@ -15,6 +16,7 @@ type ContextKey string
 const (
 	UserIDKey ContextKey = "userID"
 	UserEmail ContextKey = "userEmail"
+	UserKey   ContextKey = "user"
 )
 
 // JWTAuth is a middleware that validates JWT tokens from the Authorization header
@@ -43,9 +45,18 @@ func JWTAuth(next http.Handler) http.Handler {
 			return
 		}
 
+		userRepo := repository.NewUserRepository()
+		user, err := userRepo.GetUserByID(claims.UserID)
+
+		if err != nil {
+			utils.RespondError(w, http.StatusUnauthorized, "user not found!")
+			return
+		}
+
 		// Add user information to the request context
 		ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
 		ctx = context.WithValue(ctx, UserEmail, claims.Email)
+		ctx = context.WithValue(ctx, UserKey, user)
 
 		// Call the next handler with the updated context
 		next.ServeHTTP(w, r.WithContext(ctx))
