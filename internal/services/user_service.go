@@ -116,6 +116,11 @@ func (s *UserService) GetUserByID(id interface{}) (*models.User, error) {
 	return s.repo.GetUserByID(id)
 }
 
+// GetUserByRoleId retrieves a user by role ID
+func (s *UserService) GetUserByRoleId(roleId uuid.UUID) (*models.User, error) {
+	return s.repo.GetUsersByRoleId(roleId)
+}
+
 // UpdateUser handles user update business logic with validation
 func (s *UserService) UpdateUser(updates *models.User) (*models.User, error) {
 

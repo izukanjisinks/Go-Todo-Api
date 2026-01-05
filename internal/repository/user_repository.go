@@ -18,8 +18,8 @@ func NewUserRepository() *UserRepository {
 
 // CreateUser creates a new user in the database
 func (r *UserRepository) CreateUser(user *models.User) error {
-	query := "INSERT INTO users (id, username, email, password, is_admin, is_active, created_at, updated_at) VALUES (@p1, @p2, @p3, @p4, @p5, @p6, GETDATE(), GETDATE())"
-	_, err := r.db.Exec(query, user.UserID, user.Username, user.Email, user.Password, user.IsAdmin, user.IsActive)
+	query := "INSERT INTO users (id, username, email, password, is_admin, is_active, role_id, created_at, updated_at) VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, GETDATE(), GETDATE())"
+	_, err := r.db.Exec(query, user.UserID, user.Username, user.Email, user.Password, user.IsAdmin, user.IsActive, user.RoleID)
 	return err
 }
 
@@ -27,6 +27,17 @@ func (r *UserRepository) CreateUser(user *models.User) error {
 func (r *UserRepository) GetUserByID(id interface{}) (*models.User, error) {
 	user := &models.User{}
 	query := "SELECT id, username, email, password, is_admin, is_active, created_at, updated_at FROM users WHERE id = @p1"
+	err := r.db.QueryRow(query, id).Scan(&user.UserID, &user.Username, &user.Email, &user.Password, &user.IsAdmin, &user.IsActive, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+// GetUserByID retrieves a user by their ID
+func (r *UserRepository) GetUsersByRoleId(id interface{}) (*models.User, error) {
+	user := &models.User{}
+	query := "SELECT id, username, email, password, is_admin, is_active, created_at, updated_at FROM users WHERE role_id = @p1"
 	err := r.db.QueryRow(query, id).Scan(&user.UserID, &user.Username, &user.Email, &user.Password, &user.IsAdmin, &user.IsActive, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return nil, err
