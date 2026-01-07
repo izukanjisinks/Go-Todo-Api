@@ -29,8 +29,8 @@ func (u *User) HasPermission(permission string) bool {
 		return u.Role.HasPermission(permission)
 	}
 	// Fallback to IsAdmin for backward compatibility
-	if u.IsAdmin {
-		return true
-	}
+	// if u.IsAdmin {
+	// 	return true
+	// }
 	return false
 }

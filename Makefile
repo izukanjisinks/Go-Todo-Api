@@ -44,3 +44,51 @@ install:
 clean:
 	go clean
 	rm -f $(BINARY_NAME)
+
+# -----------------------------
+# Docker commands
+# -----------------------------
+
+# Build Docker image
+docker-build:
+	docker build -t todo-api:latest .
+
+# Start services (creates containers if they don't exist)
+docker-up:
+	docker-compose up
+
+# Start services in background (detached mode)
+docker-up-d:
+	docker-compose up -d
+
+# Stop services (keeps containers)
+docker-stop:
+	docker-compose stop
+
+# Stop and remove containers
+docker-down:
+	docker-compose down
+
+# View logs
+docker-logs:
+	docker-compose logs -f
+
+# Rebuild and restart services
+docker-rebuild:
+	docker-compose up --build
+
+# List running services
+docker-ps:
+	docker-compose ps
+
+# Execute shell command in running container
+docker-shell:
+	docker-compose exec api sh
+
+# Full restart (rebuild image and restart containers)
+docker-restart: docker-build docker-down docker-up-d
+
+# Remove all containers, networks, and volumes
+docker-clean:
+	docker-compose down -v
+	docker rmi todo-api:latest

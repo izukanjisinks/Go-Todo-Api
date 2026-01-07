@@ -2,30 +2,12 @@ package models
 
 import "github.com/google/uuid"
 
-// Permission constants
+// Permission action constants
 const (
-	// User Management
-	PermUsersRead   = "users:read"
-	PermUsersCreate = "users:create"
-	PermUsersUpdate = "users:update"
-	PermUsersDelete = "users:delete"
-
-	// Content Management
-	PermContentRead   = "content:read"
-	PermContentCreate = "content:create"
-	PermContentUpdate = "content:update"
-	PermContentDelete = "content:delete"
-
-	// System Settings
-	PermSettingsRead   = "settings:read"
-	PermSettingsUpdate = "settings:update"
-
-	// Reports
-	PermReportsView   = "reports:view"
-	PermReportsExport = "reports:export"
-
-	// Roles
-	PermRolesManage = "roles:manage"
+	PermView   = "view"
+	PermCreate = "create"
+	PermUpdate = "update"
+	PermDelete = "delete"
 )
 
 // Predefined role names
@@ -37,64 +19,109 @@ const (
 )
 
 type Role struct {
-	RoleId      uuid.UUID `json:"role_id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Permissions []string  `json:"permissions"`
+	RoleId       uuid.UUID    `json:"role_id"`
+	Name         string       `json:"name"`
+	Description  string       `json:"description"`
+	PermissionId *uuid.UUID   `json:"permission_id,omitempty"` // FK to permissions table
+	Permission   *Permissions `json:"permission,omitempty"`    // Populated via join
 }
 
-// HasPermission checks if the role has a specific permission
-func (r *Role) HasPermission(permission string) bool {
-	for _, p := range r.Permissions {
-		if p == permission {
-			return true
-		}
+type Permissions struct {
+	Id          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	View        bool      `json:"view"`
+	Create      bool      `json:"create"`
+	Update      bool      `json:"update"`
+	Delete      bool      `json:"delete"`
+}
+
+// HasPermission checks if the role's permission allows a specific action
+func (r *Role) HasPermission(action string) bool {
+	if r.Permission == nil {
+		return false
 	}
-	return false
+
+	switch action {
+	case PermView:
+		return r.Permission.View
+	case PermCreate:
+		return r.Permission.Create
+	case PermUpdate:
+		return r.Permission.Update
+	case PermDelete:
+		return r.Permission.Delete
+	default:
+		return false
+	}
 }
 
 // GetPredefinedRoles returns all predefined roles with their permissions
 func GetPredefinedRoles() []Role {
+	superAdminPermId := uuid.New()
+	adminPermId := uuid.New()
+	moderatorPermId := uuid.New()
+	userPermId := uuid.New()
+
 	return []Role{
 		{
-			RoleId:      uuid.New(),
-			Name:        RoleSuperAdmin,
-			Description: "Full system access with all permissions",
-			Permissions: []string{
-				PermUsersRead, PermUsersCreate, PermUsersUpdate, PermUsersDelete,
-				PermContentRead, PermContentCreate, PermContentUpdate, PermContentDelete,
-				PermSettingsRead, PermSettingsUpdate,
-				PermReportsView, PermReportsExport,
-				PermRolesManage,
+			RoleId:       uuid.New(),
+			Name:         RoleSuperAdmin,
+			Description:  "Full system access with all permissions",
+			PermissionId: &superAdminPermId,
+			Permission: &Permissions{
+				Id:          superAdminPermId,
+				Name:        "super_admin_permissions",
+				Description: "Full access to all operations",
+				View:        true,
+				Create:      true,
+				Update:      true,
+				Delete:      true,
 			},
 		},
 		{
-			RoleId:      uuid.New(),
-			Name:        RoleAdmin,
-			Description: "Administrative access with most permissions",
-			Permissions: []string{
-				PermUsersRead, PermUsersCreate, PermUsersUpdate, PermUsersDelete,
-				PermContentRead, PermContentCreate, PermContentUpdate, PermContentDelete,
-				PermSettingsRead,
-				PermReportsView, PermReportsExport,
+			RoleId:       uuid.New(),
+			Name:         RoleAdmin,
+			Description:  "Administrative access with most permissions",
+			PermissionId: &adminPermId,
+			Permission: &Permissions{
+				Id:          adminPermId,
+				Name:        "admin_permissions",
+				Description: "Admin level access",
+				View:        true,
+				Create:      true,
+				Update:      true,
+				Delete:      true,
 			},
 		},
 		{
-			RoleId:      uuid.New(),
-			Name:        RoleModerator,
-			Description: "Content management and user viewing access",
-			Permissions: []string{
-				PermUsersRead,
-				PermContentRead, PermContentCreate, PermContentUpdate, PermContentDelete,
+			RoleId:       uuid.New(),
+			Name:         RoleModerator,
+			Description:  "Content management and user viewing access",
+			PermissionId: &moderatorPermId,
+			Permission: &Permissions{
+				Id:          moderatorPermId,
+				Name:        "moderator_permissions",
+				Description: "Moderator level access",
+				View:        true,
+				Create:      true,
+				Update:      true,
+				Delete:      false,
 			},
 		},
 		{
-			RoleId:      uuid.New(),
-			Name:        RoleUser,
-			Description: "Basic user access with read permissions",
-			Permissions: []string{
-				PermContentRead,
-				PermReportsView,
+			RoleId:       uuid.New(),
+			Name:         RoleUser,
+			Description:  "Basic user access with read permissions",
+			PermissionId: &userPermId,
+			Permission: &Permissions{
+				Id:          userPermId,
+				Name:        "user_permissions",
+				Description: "Basic user access",
+				View:        true,
+				Create:      false,
+				Update:      false,
+				Delete:      false,
 			},
 		},
 	}

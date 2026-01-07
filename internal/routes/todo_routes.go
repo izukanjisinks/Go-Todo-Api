@@ -8,7 +8,7 @@ import (
 )
 
 func RegisterTodoRoutes(todoHandler *handlers.TodoHandler) {
-	http.HandleFunc("/todos", withAuthAndPermission(todoHandler.TodosHandler, models.PermContentRead))
-	http.HandleFunc("/todos/", withAuthAndPermission(todoHandler.TodoByIdHandler, models.PermContentRead))
-	http.HandleFunc("/todos/user", withAuthAndPermission(todoHandler.GetTodosByUserId, models.PermContentRead))
+	http.HandleFunc("/todos", withAuthAndPermission(todoHandler.TodosHandler, models.PermView))
+	http.HandleFunc("/todos/", withAuthAndPermission(todoHandler.TodoByIdHandler, models.PermView))
+	http.HandleFunc("/todos/user", withAuthAndPermission(todoHandler.GetTodosByUserId, models.PermView))
 }

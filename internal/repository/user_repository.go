@@ -2,8 +2,11 @@ package repository
 
 import (
 	"database/sql"
+	"encoding/json"
 	"todo-api/internal/database"
 	"todo-api/internal/models"
+
+	"github.com/google/uuid"
 )
 
 type UserRepository struct {
@@ -23,53 +26,247 @@ func (r *UserRepository) CreateUser(user *models.User) error {
 	return err
 }
 
-// GetUserByID retrieves a user by their ID
+// GetUserByID retrieves a user by their ID with role information
 func (r *UserRepository) GetUserByID(id interface{}) (*models.User, error) {
 	user := &models.User{}
-	query := "SELECT id, username, email, password, is_admin, is_active, created_at, updated_at FROM users WHERE id = @p1"
-	err := r.db.QueryRow(query, id).Scan(&user.UserID, &user.Username, &user.Email, &user.Password, &user.IsAdmin, &user.IsActive, &user.CreatedAt, &user.UpdatedAt)
+	query := `
+		SELECT
+			u.id, u.username, u.email, u.password, u.is_admin, u.is_active, u.created_at, u.updated_at, u.role_id,
+			CONVERT(VARCHAR(36), r.role_id) as role_id_str, r.name, r.description, r.permissions
+		FROM users u
+		LEFT JOIN roles r ON u.role_id = r.role_id
+		WHERE u.id = @p1
+	`
+
+	var roleID sql.NullString
+	var roleIDStr sql.NullString
+	var roleName sql.NullString
+	var roleDescription sql.NullString
+	var permissionsJSON sql.NullString
+
+	err := r.db.QueryRow(query, id).Scan(
+		&user.UserID, &user.Username, &user.Email, &user.Password, &user.IsAdmin, &user.IsActive, &user.CreatedAt, &user.UpdatedAt, &roleID,
+		&roleIDStr, &roleName, &roleDescription, &permissionsJSON,
+	)
 	if err != nil {
 		return nil, err
 	}
+
+	// Parse role_id from the user table
+	if roleID.Valid {
+		parsedRoleID, err := uuid.Parse(roleID.String)
+		if err == nil {
+			user.RoleID = &parsedRoleID
+		}
+	}
+
+	// Populate role if it exists
+	if roleIDStr.Valid && roleName.Valid {
+		parsedUUID, err := uuid.Parse(roleIDStr.String)
+		if err == nil {
+			role := &models.Role{
+				RoleId:      parsedUUID,
+				Name:        roleName.String,
+				Description: roleDescription.String,
+			}
+
+			if permissionsJSON.Valid {
+				var permissions []string
+				if err := json.Unmarshal([]byte(permissionsJSON.String), &permissions); err == nil {
+					role.Permissions = permissions
+				}
+			}
+
+			user.Role = role
+		}
+	}
+
 	return user, nil
 }
 
-// GetUserByID retrieves a user by their ID
+// GetUsersByRoleId retrieves a user by their role ID with role information
 func (r *UserRepository) GetUsersByRoleId(id interface{}) (*models.User, error) {
 	user := &models.User{}
-	query := "SELECT id, username, email, password, is_admin, is_active, created_at, updated_at FROM users WHERE role_id = @p1"
-	err := r.db.QueryRow(query, id).Scan(&user.UserID, &user.Username, &user.Email, &user.Password, &user.IsAdmin, &user.IsActive, &user.CreatedAt, &user.UpdatedAt)
+	query := `
+		SELECT
+			u.id, u.username, u.email, u.password, u.is_admin, u.is_active, u.created_at, u.updated_at, u.role_id,
+			CONVERT(VARCHAR(36), r.role_id) as role_id_str, r.name, r.description, r.permissions
+		FROM users u
+		LEFT JOIN roles r ON u.role_id = r.role_id
+		WHERE u.role_id = @p1
+	`
+
+	var roleID sql.NullString
+	var roleIDStr sql.NullString
+	var roleName sql.NullString
+	var roleDescription sql.NullString
+	var permissionsJSON sql.NullString
+
+	err := r.db.QueryRow(query, id).Scan(
+		&user.UserID, &user.Username, &user.Email, &user.Password, &user.IsAdmin, &user.IsActive, &user.CreatedAt, &user.UpdatedAt, &roleID,
+		&roleIDStr, &roleName, &roleDescription, &permissionsJSON,
+	)
 	if err != nil {
 		return nil, err
 	}
+
+	// Parse role_id from the user table
+	if roleID.Valid {
+		parsedRoleID, err := uuid.Parse(roleID.String)
+		if err == nil {
+			user.RoleID = &parsedRoleID
+		}
+	}
+
+	// Populate role if it exists
+	if roleIDStr.Valid && roleName.Valid {
+		parsedUUID, err := uuid.Parse(roleIDStr.String)
+		if err == nil {
+			role := &models.Role{
+				RoleId:      parsedUUID,
+				Name:        roleName.String,
+				Description: roleDescription.String,
+			}
+
+			if permissionsJSON.Valid {
+				var permissions []string
+				if err := json.Unmarshal([]byte(permissionsJSON.String), &permissions); err == nil {
+					role.Permissions = permissions
+				}
+			}
+
+			user.Role = role
+		}
+	}
+
 	return user, nil
 }
 
-// GetUserByEmail retrieves a user by their email
+// GetUserByEmail retrieves a user by their email with role information
 func (r *UserRepository) GetUserByEmail(email string) (*models.User, error) {
 	user := &models.User{}
-	query := `SELECT id, username, email, password, is_admin, is_active, created_at, updated_at FROM users WHERE email = @p1`
-	err := r.db.QueryRow(query, email).Scan(&user.UserID, &user.Username, &user.Email, &user.Password, &user.IsAdmin, &user.IsActive, &user.CreatedAt, &user.UpdatedAt)
+	query := `
+		SELECT
+			u.id, u.username, u.email, u.password, u.is_admin, u.is_active, u.created_at, u.updated_at, u.role_id,
+			CONVERT(VARCHAR(36), r.role_id) as role_id_str, r.name, r.description, r.permissions
+		FROM users u
+		LEFT JOIN roles r ON u.role_id = r.role_id
+		WHERE u.email = @p1
+	`
+
+	var roleID sql.NullString
+	var roleIDStr sql.NullString
+	var roleName sql.NullString
+	var roleDescription sql.NullString
+	var permissionsJSON sql.NullString
+
+	err := r.db.QueryRow(query, email).Scan(
+		&user.UserID, &user.Username, &user.Email, &user.Password, &user.IsAdmin, &user.IsActive, &user.CreatedAt, &user.UpdatedAt, &roleID,
+		&roleIDStr, &roleName, &roleDescription, &permissionsJSON,
+	)
 	if err != nil {
 		return nil, err
 	}
+
+	// Parse role_id from the user table
+	if roleID.Valid {
+		parsedRoleID, err := uuid.Parse(roleID.String)
+		if err == nil {
+			user.RoleID = &parsedRoleID
+		}
+	}
+
+	// Populate role if it exists
+	if roleIDStr.Valid && roleName.Valid {
+		parsedUUID, err := uuid.Parse(roleIDStr.String)
+		if err == nil {
+			role := &models.Role{
+				RoleId:      parsedUUID,
+				Name:        roleName.String,
+				Description: roleDescription.String,
+			}
+
+			if permissionsJSON.Valid {
+				var permissions []string
+				if err := json.Unmarshal([]byte(permissionsJSON.String), &permissions); err == nil {
+					role.Permissions = permissions
+				}
+			}
+
+			user.Role = role
+		}
+	}
+
 	return user, nil
 }
 
-// GetUserByUsername retrieves a user by their username
+// GetUserByUsername retrieves a user by their username with role information
 func (r *UserRepository) GetUserByUsername(username string) (*models.User, error) {
 	user := &models.User{}
-	query := `SELECT id, username, email, password, is_admin, is_active, created_at, updated_at FROM users WHERE username = @p1`
-	err := r.db.QueryRow(query, username).Scan(&user.UserID, &user.Username, &user.Email, &user.Password, &user.IsAdmin, &user.IsActive, &user.CreatedAt, &user.UpdatedAt)
+	query := `
+		SELECT
+			u.id, u.username, u.email, u.password, u.is_admin, u.is_active, u.created_at, u.updated_at, u.role_id,
+			CONVERT(VARCHAR(36), r.role_id) as role_id_str, r.name, r.description, r.permissions
+		FROM users u
+		LEFT JOIN roles r ON u.role_id = r.role_id
+		WHERE u.username = @p1
+	`
+
+	var roleID sql.NullString
+	var roleIDStr sql.NullString
+	var roleName sql.NullString
+	var roleDescription sql.NullString
+	var permissionsJSON sql.NullString
+
+	err := r.db.QueryRow(query, username).Scan(
+		&user.UserID, &user.Username, &user.Email, &user.Password, &user.IsAdmin, &user.IsActive, &user.CreatedAt, &user.UpdatedAt, &roleID,
+		&roleIDStr, &roleName, &roleDescription, &permissionsJSON,
+	)
 	if err != nil {
 		return nil, err
 	}
+
+	// Parse role_id from the user table
+	if roleID.Valid {
+		parsedRoleID, err := uuid.Parse(roleID.String)
+		if err == nil {
+			user.RoleID = &parsedRoleID
+		}
+	}
+
+	// Populate role if it exists
+	if roleIDStr.Valid && roleName.Valid {
+		parsedUUID, err := uuid.Parse(roleIDStr.String)
+		if err == nil {
+			role := &models.Role{
+				RoleId:      parsedUUID,
+				Name:        roleName.String,
+				Description: roleDescription.String,
+			}
+
+			if permissionsJSON.Valid {
+				var permissions []string
+				if err := json.Unmarshal([]byte(permissionsJSON.String), &permissions); err == nil {
+					role.Permissions = permissions
+				}
+			}
+
+			user.Role = role
+		}
+	}
+
 	return user, nil
 }
 
-// GetAllUsers retrieves all users from the database
+// GetAllUsers retrieves all users from the database with role information
 func (r *UserRepository) GetAllUsers() ([]models.User, error) {
-	query := `SELECT id, username, email, password, is_admin, is_active, created_at, updated_at FROM users`
+	query := `
+		SELECT
+			u.id, u.username, u.email, u.password, u.is_admin, u.is_active, u.created_at, u.updated_at, u.role_id,
+			CONVERT(VARCHAR(36), r.role_id) as role_id_str, r.name, r.description, r.permissions
+		FROM users u
+		LEFT JOIN roles r ON u.role_id = r.role_id
+	`
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, err
@@ -79,10 +276,49 @@ func (r *UserRepository) GetAllUsers() ([]models.User, error) {
 	var users []models.User
 	for rows.Next() {
 		var user models.User
-		err := rows.Scan(&user.UserID, &user.Username, &user.Email, &user.Password, &user.IsAdmin, &user.IsActive, &user.CreatedAt, &user.UpdatedAt)
+		var roleID sql.NullString
+		var roleIDStr sql.NullString
+		var roleName sql.NullString
+		var roleDescription sql.NullString
+		var permissionsJSON sql.NullString
+
+		err := rows.Scan(
+			&user.UserID, &user.Username, &user.Email, &user.Password, &user.IsAdmin, &user.IsActive, &user.CreatedAt, &user.UpdatedAt, &roleID,
+			&roleIDStr, &roleName, &roleDescription, &permissionsJSON,
+		)
 		if err != nil {
 			return nil, err
 		}
+
+		// Parse role_id from the user table
+		if roleID.Valid {
+			parsedRoleID, err := uuid.Parse(roleID.String)
+			if err == nil {
+				user.RoleID = &parsedRoleID
+			}
+		}
+
+		// Populate role if it exists
+		if roleIDStr.Valid && roleName.Valid {
+			parsedUUID, err := uuid.Parse(roleIDStr.String)
+			if err == nil {
+				role := &models.Role{
+					RoleId:      parsedUUID,
+					Name:        roleName.String,
+					Description: roleDescription.String,
+				}
+
+				if permissionsJSON.Valid {
+					var permissions []string
+					if err := json.Unmarshal([]byte(permissionsJSON.String), &permissions); err == nil {
+						role.Permissions = permissions
+					}
+				}
+
+				user.Role = role
+			}
+		}
+
 		users = append(users, user)
 	}
 	return users, nil

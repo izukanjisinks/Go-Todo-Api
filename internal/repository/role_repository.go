@@ -2,7 +2,6 @@ package repository
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -29,16 +28,11 @@ func (r *RoleRepository) CreateRole(role *models.Role) error {
 	}
 
 	query := `
-		INSERT INTO roles (role_id, name, description, permissions)
+		INSERT INTO roles (role_id, name, description, permission_id)
 		VALUES (@p1, @p2, @p3, @p4)
 	`
 
-	permissionsJSON, err := json.Marshal(role.Permissions)
-	if err != nil {
-		return fmt.Errorf("failed to marshal permissions: %w", err)
-	}
-
-	_, err = r.db.Exec(query, role.RoleId, role.Name, role.Description, string(permissionsJSON))
+	_, err := r.db.Exec(query, role.RoleId, role.Name, role.Description, role.PermissionId)
 	if err != nil {
 		return fmt.Errorf("failed to create role: %w", err)
 	}
@@ -46,22 +40,49 @@ func (r *RoleRepository) CreateRole(role *models.Role) error {
 	return nil
 }
 
-// GetRoleByID retrieves a role by its ID
+// GetRoleByID retrieves a role by its ID with permission details
 func (r *RoleRepository) GetRoleByID(roleID uuid.UUID) (*models.Role, error) {
 	query := `
-		SELECT CONVERT(VARCHAR(36), role_id) as role_id, name, description, permissions
-		FROM roles
-		WHERE role_id = @p1
+		SELECT
+			CONVERT(VARCHAR(36), r.role_id) as role_id,
+			r.name,
+			r.description,
+			CONVERT(VARCHAR(36), r.permission_id) as permission_id,
+			CONVERT(VARCHAR(36), p.id) as perm_id,
+			p.name as perm_name,
+			p.description as perm_description,
+			p.view,
+			p.create,
+			p.update,
+			p.delete
+		FROM roles r
+		LEFT JOIN permissions p ON r.permission_id = p.id
+		WHERE r.role_id = @p1
 	`
 
 	role := &models.Role{}
 	var roleIDStr string
-	var permissionsJSON string
+	var permissionIDStr sql.NullString
+	var permIDStr sql.NullString
+	var permName sql.NullString
+	var permDescription sql.NullString
+	var permView sql.NullBool
+	var permCreate sql.NullBool
+	var permUpdate sql.NullBool
+	var permDelete sql.NullBool
+
 	err := r.db.QueryRow(query, roleID).Scan(
 		&roleIDStr,
 		&role.Name,
 		&role.Description,
-		&permissionsJSON,
+		&permissionIDStr,
+		&permIDStr,
+		&permName,
+		&permDescription,
+		&permView,
+		&permCreate,
+		&permUpdate,
+		&permDelete,
 	)
 
 	if err != nil {
@@ -71,37 +92,86 @@ func (r *RoleRepository) GetRoleByID(roleID uuid.UUID) (*models.Role, error) {
 		return nil, fmt.Errorf("failed to get role: %w", err)
 	}
 
-	// Parse the UUID string
-	parsedUUID, err := uuid.Parse(roleIDStr)
+	// Parse the role UUID string
+	parsedRoleUUID, err := uuid.Parse(roleIDStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse role_id: %w", err)
 	}
-	role.RoleId = parsedUUID
+	role.RoleId = parsedRoleUUID
 
-	err = json.Unmarshal([]byte(permissionsJSON), &role.Permissions)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal permissions: %w", err)
+	// Parse permission_id if exists
+	if permissionIDStr.Valid {
+		parsedPermissionID, err := uuid.Parse(permissionIDStr.String)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse permission_id: %w", err)
+		}
+		role.PermissionId = &parsedPermissionID
+	}
+
+	// Populate permission object if exists
+	if permIDStr.Valid && permName.Valid {
+		parsedPermID, err := uuid.Parse(permIDStr.String)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse permission id: %w", err)
+		}
+
+		role.Permission = &models.Permissions{
+			Id:          parsedPermID,
+			Name:        permName.String,
+			Description: permDescription.String,
+			View:        permView.Bool,
+			Create:      permCreate.Bool,
+			Update:      permUpdate.Bool,
+			Delete:      permDelete.Bool,
+		}
 	}
 
 	return role, nil
 }
 
-// GetRoleByName retrieves a role by its name
+// GetRoleByName retrieves a role by its name with permission details
 func (r *RoleRepository) GetRoleByName(name string) (*models.Role, error) {
 	query := `
-		SELECT CONVERT(VARCHAR(36), role_id) as role_id, name, description, permissions
-		FROM roles
-		WHERE name = @p1
+		SELECT
+			CONVERT(VARCHAR(36), r.role_id) as role_id,
+			r.name,
+			r.description,
+			CONVERT(VARCHAR(36), r.permission_id) as permission_id,
+			CONVERT(VARCHAR(36), p.id) as perm_id,
+			p.name as perm_name,
+			p.description as perm_description,
+			p.view,
+			p.create,
+			p.update,
+			p.delete
+		FROM roles r
+		LEFT JOIN permissions p ON r.permission_id = p.id
+		WHERE r.name = @p1
 	`
 
 	role := &models.Role{}
 	var roleIDStr string
-	var permissionsJSON string
+	var permissionIDStr sql.NullString
+	var permIDStr sql.NullString
+	var permName sql.NullString
+	var permDescription sql.NullString
+	var permView sql.NullBool
+	var permCreate sql.NullBool
+	var permUpdate sql.NullBool
+	var permDelete sql.NullBool
+
 	err := r.db.QueryRow(query, name).Scan(
 		&roleIDStr,
 		&role.Name,
 		&role.Description,
-		&permissionsJSON,
+		&permissionIDStr,
+		&permIDStr,
+		&permName,
+		&permDescription,
+		&permView,
+		&permCreate,
+		&permUpdate,
+		&permDelete,
 	)
 
 	if err != nil {
@@ -111,27 +181,61 @@ func (r *RoleRepository) GetRoleByName(name string) (*models.Role, error) {
 		return nil, fmt.Errorf("failed to get role: %w", err)
 	}
 
-	// Parse the UUID string
-	parsedUUID, err := uuid.Parse(roleIDStr)
+	// Parse the role UUID string
+	parsedRoleUUID, err := uuid.Parse(roleIDStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse role_id: %w", err)
 	}
-	role.RoleId = parsedUUID
+	role.RoleId = parsedRoleUUID
 
-	err = json.Unmarshal([]byte(permissionsJSON), &role.Permissions)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal permissions: %w", err)
+	// Parse permission_id if exists
+	if permissionIDStr.Valid {
+		parsedPermissionID, err := uuid.Parse(permissionIDStr.String)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse permission_id: %w", err)
+		}
+		role.PermissionId = &parsedPermissionID
+	}
+
+	// Populate permission object if exists
+	if permIDStr.Valid && permName.Valid {
+		parsedPermID, err := uuid.Parse(permIDStr.String)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse permission id: %w", err)
+		}
+
+		role.Permission = &models.Permissions{
+			Id:          parsedPermID,
+			Name:        permName.String,
+			Description: permDescription.String,
+			View:        permView.Bool,
+			Create:      permCreate.Bool,
+			Update:      permUpdate.Bool,
+			Delete:      permDelete.Bool,
+		}
 	}
 
 	return role, nil
 }
 
-// GetAllRoles retrieves all roles from the database
+// GetAllRoles retrieves all roles from the database with their permissions
 func (r *RoleRepository) GetAllRoles() ([]models.Role, error) {
 	query := `
-		SELECT CONVERT(VARCHAR(36), role_id) as role_id, name, description, permissions
-		FROM roles
-		ORDER BY name
+		SELECT
+			CONVERT(VARCHAR(36), r.role_id) as role_id,
+			r.name,
+			r.description,
+			CONVERT(VARCHAR(36), r.permission_id) as permission_id,
+			CONVERT(VARCHAR(36), p.id) as perm_id,
+			p.name as perm_name,
+			p.description as perm_description,
+			p.view,
+			p.create,
+			p.update,
+			p.delete
+		FROM roles r
+		LEFT JOIN permissions p ON r.permission_id = p.id
+		ORDER BY r.name
 	`
 
 	rows, err := r.db.Query(query)
@@ -144,28 +248,66 @@ func (r *RoleRepository) GetAllRoles() ([]models.Role, error) {
 	for rows.Next() {
 		var role models.Role
 		var roleIDStr string
-		var permissionsJSON string
+		var permissionIDStr sql.NullString
+		var permIDStr sql.NullString
+		var permName sql.NullString
+		var permDescription sql.NullString
+		var permView sql.NullBool
+		var permCreate sql.NullBool
+		var permUpdate sql.NullBool
+		var permDelete sql.NullBool
+
 		err := rows.Scan(
 			&roleIDStr,
 			&role.Name,
 			&role.Description,
-			&permissionsJSON,
+			&permissionIDStr,
+			&permIDStr,
+			&permName,
+			&permDescription,
+			&permView,
+			&permCreate,
+			&permUpdate,
+			&permDelete,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan role: %w", err)
 		}
 
-		// Parse the UUID string
-		parsedUUID, err := uuid.Parse(roleIDStr)
+		// Parse the role UUID string
+		parsedRoleUUID, err := uuid.Parse(roleIDStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse role_id: %w", err)
 		}
-		role.RoleId = parsedUUID
+		role.RoleId = parsedRoleUUID
 
-		err = json.Unmarshal([]byte(permissionsJSON), &role.Permissions)
-		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal permissions: %w", err)
+		// Parse permission_id if exists
+		if permissionIDStr.Valid {
+			parsedPermissionID, err := uuid.Parse(permissionIDStr.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse permission_id: %w", err)
+			}
+			role.PermissionId = &parsedPermissionID
 		}
+
+		// Populate permission object if exists
+		if permIDStr.Valid && permName.Valid {
+			parsedPermID, err := uuid.Parse(permIDStr.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse permission id: %w", err)
+			}
+
+			role.Permission = &models.Permissions{
+				Id:          parsedPermID,
+				Name:        permName.String,
+				Description: permDescription.String,
+				View:        permView.Bool,
+				Create:      permCreate.Bool,
+				Update:      permUpdate.Bool,
+				Delete:      permDelete.Bool,
+			}
+		}
+
 		roles = append(roles, role)
 	}
 
@@ -176,16 +318,11 @@ func (r *RoleRepository) GetAllRoles() ([]models.Role, error) {
 func (r *RoleRepository) UpdateRole(role *models.Role) error {
 	query := `
 		UPDATE roles
-		SET name = @p2, description = @p3, permissions = @p4
+		SET name = @p2, description = @p3, permission_id = @p4
 		WHERE role_id = @p1
 	`
 
-	permissionsJSON, err := json.Marshal(role.Permissions)
-	if err != nil {
-		return fmt.Errorf("failed to marshal permissions: %w", err)
-	}
-
-	result, err := r.db.Exec(query, role.RoleId, role.Name, role.Description, string(permissionsJSON))
+	result, err := r.db.Exec(query, role.RoleId, role.Name, role.Description, role.PermissionId)
 	if err != nil {
 		return fmt.Errorf("failed to update role: %w", err)
 	}
@@ -248,29 +385,49 @@ func (r *RoleRepository) AssignRoleToUser(userID, roleID uuid.UUID) error {
 	return nil
 }
 
-// GetUserPermissions retrieves permissions for a user by joining with roles
-func (r *RoleRepository) GetUserPermissions(userID uuid.UUID) ([]string, error) {
+// GetUserPermissions retrieves permissions for a user by joining with roles and permissions
+func (r *RoleRepository) GetUserPermissions(userID uuid.UUID) (*models.Permissions, error) {
 	query := `
-		SELECT r.permissions
+		SELECT
+			CONVERT(VARCHAR(36), p.id) as perm_id,
+			p.name,
+			p.description,
+			p.view,
+			p.create,
+			p.update,
+			p.delete
 		FROM users u
 		JOIN roles r ON u.role_id = r.role_id
+		JOIN permissions p ON r.permission_id = p.id
 		WHERE u.id = @p1
 	`
 
-	var permissionsJSON string
-	err := r.db.QueryRow(query, userID).Scan(&permissionsJSON)
+	var permIDStr string
+	var permission models.Permissions
+
+	err := r.db.QueryRow(query, userID).Scan(
+		&permIDStr,
+		&permission.Name,
+		&permission.Description,
+		&permission.View,
+		&permission.Create,
+		&permission.Update,
+		&permission.Delete,
+	)
+
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return []string{}, nil
+			return nil, errors.New("user or permissions not found")
 		}
 		return nil, fmt.Errorf("failed to get user permissions: %w", err)
 	}
 
-	var permissions []string
-	err = json.Unmarshal([]byte(permissionsJSON), &permissions)
+	// Parse permission ID
+	parsedPermID, err := uuid.Parse(permIDStr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal permissions: %w", err)
+		return nil, fmt.Errorf("failed to parse permission id: %w", err)
 	}
+	permission.Id = parsedPermID
 
-	return permissions, nil
+	return &permission, nil
 }
