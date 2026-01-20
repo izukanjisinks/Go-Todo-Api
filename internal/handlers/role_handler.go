@@ -90,8 +90,8 @@ func (h *RoleHandler) CreateRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(role.Permissions) == 0 {
-		http.Error(w, "At least one permission is required", http.StatusBadRequest)
+	if role.PermissionId == nil {
+		http.Error(w, "Permission ID is required", http.StatusBadRequest)
 		return
 	}
 
@@ -206,8 +206,8 @@ func (h *RoleHandler) GetUserPermissions(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	// Users can only view their own permissions unless they have users:read permission
-	if user.UserID != userID && !user.HasPermission(models.PermUsersRead) {
+	// Users can only view their own permissions unless they have view permission
+	if user.UserID != userID && !user.HasPermission(models.PermView) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
@@ -222,7 +222,7 @@ func (h *RoleHandler) GetUserPermissions(w http.ResponseWriter, r *http.Request,
 	response := map[string]interface{}{
 		"user_id":     userID,
 		"role":        role.Name,
-		"permissions": role.Permissions,
+		"permissions": role.Permission,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

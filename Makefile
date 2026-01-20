@@ -1,21 +1,24 @@
 # Makefile for Go project
-DB_SERVER=localhost
-DB_PORT=1433
-DB_NAME=Todos
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=66231
+DB_NAME=rbca_system
+DB_SSLMODE=disable
 
 
 # Database migrations
 migrate-up:
-	migrate -path migrations -database "sqlserver://$(DB_SERVER):$(DB_PORT)?database=$(DB_NAME)&trusted_connection=yes" up
+	migrate -path migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=$(DB_SSLMODE)" up
 
 migrate-down:
-	migrate -path migrations -database "sqlserver://$(DB_SERVER):$(DB_PORT)?database=$(DB_NAME)&trusted_connection=yes" down
+	migrate -path migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=$(DB_SSLMODE)" down
 
 migrate-create:
 	migrate create -ext sql -dir migrations -seq $(name)
 
 migrate-force:
-	migrate -path migrations -database "sqlserver://$(DB_SERVER):$(DB_PORT)?database=$(DB_NAME)&trusted_connection=yes" force $(version)
+	migrate -path migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=$(DB_SSLMODE)" force $(version)
 
 # The name of the compiled binary (executable file)
 BINARY_NAME=todo-api

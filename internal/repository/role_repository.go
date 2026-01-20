@@ -21,18 +21,97 @@ func NewRoleRepository() *RoleRepository {
 	}
 }
 
+// GetPermissionByName retrieves a permission by its name
+func (r *RoleRepository) GetPermissionByName(name string) (*models.Permissions, error) {
+	query := `
+		SELECT id::TEXT as id, name, description, view, create, update, delete
+		FROM permissions
+		WHERE name = $1
+	`
+
+	var permission models.Permissions
+	var idStr string
+
+	err := r.db.QueryRow(query, name).Scan(&idStr, &permission.Name, &permission.Description, &permission.View, &permission.Create, &permission.Update, &permission.Delete)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get permission: %w", err)
+	}
+
+	parsedID, err := uuid.Parse(idStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse permission id: %w", err)
+	}
+	permission.Id = parsedID
+
+	return &permission, nil
+}
+
+// CreatePermission creates a new permission in the database
+func (r *RoleRepository) CreatePermission(perm *models.Permissions) error {
+	// Check if permission already exists
+	existing, err := r.GetPermissionByName(perm.Name)
+	if err != nil {
+		return err
+	}
+	if existing != nil {
+		// Permission already exists, use its ID
+		perm.Id = existing.Id
+		return nil
+	}
+
+	if perm.Id == uuid.Nil {
+		perm.Id = uuid.New()
+	}
+
+	query := `
+		INSERT INTO permissions (id, name, description, view, create, update, delete)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`
+
+	_, err = r.db.Exec(query, perm.Id, perm.Name, perm.Description, perm.View, perm.Create, perm.Update, perm.Delete)
+	if err != nil {
+		return fmt.Errorf("failed to create permission: %w", err)
+	}
+
+	return nil
+}
+
 // CreateRole creates a new role in the database
 func (r *RoleRepository) CreateRole(role *models.Role) error {
+	// Check if role already exists by name
+	existing, err := r.GetRoleByName(role.Name)
+	if existing != nil {
+		// Role already exists, just return without error
+		role.RoleId = existing.RoleId
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("error checking existing role: %w", err)
+	}
+
 	if role.RoleId == uuid.Nil {
 		role.RoleId = uuid.New()
 	}
 
+	// If role has a Permission object, create the permission first
+	if role.Permission != nil {
+		err := r.CreatePermission(role.Permission)
+		if err != nil {
+			return fmt.Errorf("failed to create permission: %w", err)
+		}
+		// Ensure PermissionId is set to the Permission's ID
+		role.PermissionId = &role.Permission.Id
+	}
+
 	query := `
 		INSERT INTO roles (role_id, name, description, permission_id)
-		VALUES (@p1, @p2, @p3, @p4)
+		VALUES ($1, $2, $3, $4)
 	`
 
-	_, err := r.db.Exec(query, role.RoleId, role.Name, role.Description, role.PermissionId)
+	_, err = r.db.Exec(query, role.RoleId, role.Name, role.Description, role.PermissionId)
 	if err != nil {
 		return fmt.Errorf("failed to create role: %w", err)
 	}
@@ -44,11 +123,11 @@ func (r *RoleRepository) CreateRole(role *models.Role) error {
 func (r *RoleRepository) GetRoleByID(roleID uuid.UUID) (*models.Role, error) {
 	query := `
 		SELECT
-			CONVERT(VARCHAR(36), r.role_id) as role_id,
+			r.role_id::TEXT as role_id,
 			r.name,
 			r.description,
-			CONVERT(VARCHAR(36), r.permission_id) as permission_id,
-			CONVERT(VARCHAR(36), p.id) as perm_id,
+			r.permission_id::TEXT as permission_id,
+			p.id::TEXT as perm_id,
 			p.name as perm_name,
 			p.description as perm_description,
 			p.view,
@@ -57,7 +136,7 @@ func (r *RoleRepository) GetRoleByID(roleID uuid.UUID) (*models.Role, error) {
 			p.delete
 		FROM roles r
 		LEFT JOIN permissions p ON r.permission_id = p.id
-		WHERE r.role_id = @p1
+		WHERE r.role_id = $1
 	`
 
 	role := &models.Role{}
@@ -133,11 +212,11 @@ func (r *RoleRepository) GetRoleByID(roleID uuid.UUID) (*models.Role, error) {
 func (r *RoleRepository) GetRoleByName(name string) (*models.Role, error) {
 	query := `
 		SELECT
-			CONVERT(VARCHAR(36), r.role_id) as role_id,
+			r.role_id::TEXT as role_id,
 			r.name,
 			r.description,
-			CONVERT(VARCHAR(36), r.permission_id) as permission_id,
-			CONVERT(VARCHAR(36), p.id) as perm_id,
+			r.permission_id::TEXT as permission_id,
+			p.id::TEXT as perm_id,
 			p.name as perm_name,
 			p.description as perm_description,
 			p.view,
@@ -146,7 +225,7 @@ func (r *RoleRepository) GetRoleByName(name string) (*models.Role, error) {
 			p.delete
 		FROM roles r
 		LEFT JOIN permissions p ON r.permission_id = p.id
-		WHERE r.name = @p1
+		WHERE r.name = $1
 	`
 
 	role := &models.Role{}
@@ -176,7 +255,7 @@ func (r *RoleRepository) GetRoleByName(name string) (*models.Role, error) {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, errors.New("role not found")
+			return nil, nil // Return nil, nil when role not found (not an error)
 		}
 		return nil, fmt.Errorf("failed to get role: %w", err)
 	}
@@ -222,11 +301,11 @@ func (r *RoleRepository) GetRoleByName(name string) (*models.Role, error) {
 func (r *RoleRepository) GetAllRoles() ([]models.Role, error) {
 	query := `
 		SELECT
-			CONVERT(VARCHAR(36), r.role_id) as role_id,
+			r.role_id::TEXT as role_id,
 			r.name,
 			r.description,
-			CONVERT(VARCHAR(36), r.permission_id) as permission_id,
-			CONVERT(VARCHAR(36), p.id) as perm_id,
+			r.permission_id::TEXT as permission_id,
+			p.id::TEXT as perm_id,
 			p.name as perm_name,
 			p.description as perm_description,
 			p.view,
@@ -318,8 +397,8 @@ func (r *RoleRepository) GetAllRoles() ([]models.Role, error) {
 func (r *RoleRepository) UpdateRole(role *models.Role) error {
 	query := `
 		UPDATE roles
-		SET name = @p2, description = @p3, permission_id = @p4
-		WHERE role_id = @p1
+		SET name = $2, description = $3, permission_id = $4
+		WHERE role_id = $1
 	`
 
 	result, err := r.db.Exec(query, role.RoleId, role.Name, role.Description, role.PermissionId)
@@ -341,7 +420,7 @@ func (r *RoleRepository) UpdateRole(role *models.Role) error {
 
 // DeleteRole deletes a role by its ID
 func (r *RoleRepository) DeleteRole(roleID uuid.UUID) error {
-	query := `DELETE FROM roles WHERE role_id = @p1`
+	query := `DELETE FROM roles WHERE role_id = $1`
 
 	result, err := r.db.Exec(query, roleID)
 	if err != nil {
@@ -364,8 +443,8 @@ func (r *RoleRepository) DeleteRole(roleID uuid.UUID) error {
 func (r *RoleRepository) AssignRoleToUser(userID, roleID uuid.UUID) error {
 	query := `
 		UPDATE users
-		SET role_id = @p2
-		WHERE id = @p1
+		SET role_id = $2
+		WHERE id = $1
 	`
 
 	result, err := r.db.Exec(query, userID, roleID)
@@ -389,7 +468,7 @@ func (r *RoleRepository) AssignRoleToUser(userID, roleID uuid.UUID) error {
 func (r *RoleRepository) GetUserPermissions(userID uuid.UUID) (*models.Permissions, error) {
 	query := `
 		SELECT
-			CONVERT(VARCHAR(36), p.id) as perm_id,
+			p.id::TEXT as perm_id,
 			p.name,
 			p.description,
 			p.view,
@@ -399,7 +478,7 @@ func (r *RoleRepository) GetUserPermissions(userID uuid.UUID) (*models.Permissio
 		FROM users u
 		JOIN roles r ON u.role_id = r.role_id
 		JOIN permissions p ON r.permission_id = p.id
-		WHERE u.id = @p1
+		WHERE u.id = $1
 	`
 
 	var permIDStr string

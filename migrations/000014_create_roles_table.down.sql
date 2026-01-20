@@ -2,7 +2,7 @@
 ALTER TABLE users DROP CONSTRAINT fk_users_role;
 
 -- Drop index
-DROP INDEX idx_users_role_id ON users;
+DROP INDEX idx_users_role_id;
 
 -- Remove role_id column from users table
 ALTER TABLE users DROP COLUMN role_id;

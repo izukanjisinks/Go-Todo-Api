@@ -39,7 +39,7 @@ func (r *TodoRepository) GetAll() ([]models.Todo, error) {
 
 func (r *TodoRepository) GetById(userID string) (*models.Todo, error) {
 	var todo models.Todo
-	err := r.db.QueryRow(`SELECT CAST(id AS VARCHAR(36)), task_name, task_description, completed, user_id, created_at, updated_at FROM todos WHERE id = @p1`, userID).
+	err := r.db.QueryRow(`SELECT CAST(id AS VARCHAR(36)), task_name, task_description, completed, user_id, created_at, updated_at FROM todos WHERE id = $1`, userID).
 		Scan(&todo.Id, &todo.TaskName, &todo.TaskDescription, &todo.Completed, &todo.UserID, &todo.CreatedAt, &todo.UpdatedAt)
 
 	if err == sql.ErrNoRows {
@@ -54,13 +54,13 @@ func (r *TodoRepository) GetById(userID string) (*models.Todo, error) {
 
 func (r *TodoRepository) Create(todo *models.Todo) error {
 	fmt.Println("the todo", todo)
-	_, err := r.db.Exec(`INSERT INTO todos (id, task_name, task_description, completed, user_id) VALUES (@p1, @p2, @p3, @p4, @p5)`,
+	_, err := r.db.Exec(`INSERT INTO todos (id, task_name, task_description, completed, user_id) VALUES ($1, $2, $3, $4, $5)`,
 		todo.Id, todo.TaskName, todo.TaskDescription, todo.Completed, todo.UserID)
 	return err
 }
 
 func (r *TodoRepository) Update(id string, todo *models.Todo) (int64, error) {
-	result, err := r.db.Exec(`UPDATE todos SET task_name = @p1, task_description = @p2, completed = @p3, updated_at = GETDATE() WHERE id = @p4`,
+	result, err := r.db.Exec(`UPDATE todos SET task_name = $1, task_description = $2, completed = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4`,
 		todo.TaskName, todo.TaskDescription, todo.Completed, id)
 	if err != nil {
 		return 0, err
@@ -71,7 +71,7 @@ func (r *TodoRepository) Update(id string, todo *models.Todo) (int64, error) {
 }
 
 func (r *TodoRepository) Delete(id string) (int64, error) {
-	result, err := r.db.Exec("DELETE FROM todos WHERE id = @p1", id)
+	result, err := r.db.Exec("DELETE FROM todos WHERE id = $1", id)
 	if err != nil {
 		return 0, err
 	}
@@ -81,7 +81,7 @@ func (r *TodoRepository) Delete(id string) (int64, error) {
 }
 
 func (r *TodoRepository) GetByUserId(userID string) ([]models.Todo, error) {
-	rows, err := r.db.Query(`SELECT CAST(id AS VARCHAR(36)), task_name, task_description, completed, user_id, created_at, updated_at FROM todos WHERE user_id = @p1`, userID)
+	rows, err := r.db.Query(`SELECT CAST(id AS VARCHAR(36)), task_name, task_description, completed, user_id, created_at, updated_at FROM todos WHERE user_id = $1`, userID)
 	if err != nil {
 		return nil, err
 	}

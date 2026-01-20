@@ -16,6 +16,10 @@ import (
 func seedDefaultAdmin(userService *services.UserService, roleService *services.RoleService) {
 
 	superAdmin, err := roleService.GetRoleByName(models.RoleSuperAdmin)
+	if err != nil || superAdmin == nil {
+		log.Println("Warning: Could not find super admin role, skipping default admin creation...")
+		return
+	}
 
 	user, _ := userService.GetUserByRoleId(superAdmin.RoleId)
 	hasSuperAdmin := false
@@ -28,10 +32,9 @@ func seedDefaultAdmin(userService *services.UserService, roleService *services.R
 
 	if !hasSuperAdmin {
 		log.Println("No super admin found, creating default super admin...")
-	}
-
-	if err != nil {
-		log.Println("Warning: Could not create super admin role, super admin role not found...")
+	} else {
+		log.Println("Super admin user already exists, skipping creation...")
+		return
 	}
 
 	adminUser := &models.User{

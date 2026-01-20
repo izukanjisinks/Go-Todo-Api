@@ -1,5 +1,5 @@
 -- Add back the permissions column (JSON)
-ALTER TABLE roles ADD permissions NVARCHAR(MAX) NOT NULL DEFAULT '[]';
+ALTER TABLE roles ADD permissions TEXT NOT NULL DEFAULT '[]';
 
 -- Restore permissions data based on permission_id (best effort)
 UPDATE roles
@@ -19,7 +19,7 @@ SET permissions = '["content:read","reports:view"]'
 WHERE name = 'User';
 
 -- Drop index
-DROP INDEX idx_roles_permission_id ON roles;
+DROP INDEX idx_roles_permission_id;
 
 -- Remove foreign key constraint
 ALTER TABLE roles DROP CONSTRAINT fk_roles_permission;

@@ -1,3 +1,13 @@
-#nothing to ignore here
+# Environment variables (contains secrets!)
+.env
 
-#.env # Ignores .env in any directory
+# Binaries
+todo-api
+*.exe
+
+# IDE
+.idea/
+.vscode/
+
+# Temp files
+tmpclaude-*

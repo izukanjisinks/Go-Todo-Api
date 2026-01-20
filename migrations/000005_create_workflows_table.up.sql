@@ -1,11 +1,11 @@
 CREATE TABLE workflows (
-    id NVARCHAR(36) PRIMARY KEY,
-    name NVARCHAR(200) NOT NULL,
-    description NVARCHAR(500),
-    is_active BIT DEFAULT 1,
-    created_by NVARCHAR(100) NOT NULL,
-    created_at DATETIME2 DEFAULT GETDATE(),
-    updated_at DATETIME2 DEFAULT GETDATE()
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(200) NOT NULL,
+    description VARCHAR(500),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_by VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_workflows_is_active ON workflows(is_active);

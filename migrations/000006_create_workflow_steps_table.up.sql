@@ -1,12 +1,12 @@
 CREATE TABLE workflow_steps (
-    id NVARCHAR(36) PRIMARY KEY,
-    workflow_id NVARCHAR(36) NOT NULL,
-    step_name NVARCHAR(100) NOT NULL,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workflow_id UUID NOT NULL,
+    step_name VARCHAR(100) NOT NULL,
     step_order INT NOT NULL,
-    initial BIT DEFAULT 0,
-    final BIT DEFAULT 0,
-    allowed_roles NVARCHAR(MAX), -- JSON array of roles
-    created_at DATETIME2 DEFAULT GETDATE(),
+    initial BOOLEAN DEFAULT FALSE,
+    final BOOLEAN DEFAULT FALSE,
+    allowed_roles TEXT, -- JSON array of roles
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_workflow_steps_workflow_id FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
 );
 

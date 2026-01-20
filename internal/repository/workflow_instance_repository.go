@@ -20,7 +20,7 @@ func NewWorkflowInstanceRepository() *WorkflowInstanceRepository {
 // CreateInstance creates a new workflow instance
 func (r *WorkflowInstanceRepository) CreateInstance(instance *models.AssignedTodo) error {
 	_, err := r.db.Exec(`INSERT INTO workflow_instances (id, workflow_id, current_step_id, assigned_to, created_at, updated_at) 
-		VALUES (@p1, @p2, @p3, @p4, @p5, @p6 )`,
+		VALUES ($1, $2, $3, $4, $5, $6 )`,
 		instance.ID, instance.WorkflowId, instance.CurrentStepId, instance.AssignedTo, instance.CreatedAt, instance.UpdatedAt)
 	return err
 }
@@ -30,7 +30,7 @@ func (r *WorkflowInstanceRepository) GetInstance(id string) (*models.AssignedTod
 	instance := &models.AssignedTodo{}
 	var todoData sql.NullString
 	err := r.db.QueryRow(`SELECT id, workflow_id, current_step_id, title, description, task_data, assigned_to, created_by, created_at, updated_at 
-		FROM workflow_instances WHERE id = @p1`, id).Scan(
+		FROM workflow_instances WHERE id = $1`, id).Scan(
 		&instance.ID, &instance.WorkflowId, &instance.CurrentStepId,
 		&todoData, &instance.AssignedTo, &instance.CreatedAt, &instance.UpdatedAt)
 
@@ -47,7 +47,7 @@ func (r *WorkflowInstanceRepository) GetInstance(id string) (*models.AssignedTod
 // GetInstancesByWorkflow retrieves all instances for a workflow
 func (r *WorkflowInstanceRepository) GetInstancesByWorkflow(workflowID string) ([]*models.AssignedTodo, error) {
 	rows, err := r.db.Query(`SELECT id, workflow_id, current_step_id, title, description, task_data, assigned_to, created_by, created_at, updated_at 
-		FROM workflow_instances WHERE workflow_id = @p1 ORDER BY created_at DESC`, workflowID)
+		FROM workflow_instances WHERE workflow_id = $1 ORDER BY created_at DESC`, workflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func (r *WorkflowInstanceRepository) GetInstancesByWorkflow(workflowID string) (
 // GetInstancesByUser retrieves all instances assigned to a user
 func (r *WorkflowInstanceRepository) GetInstancesByUser(userID string) ([]*models.AssignedTodo, error) {
 	rows, err := r.db.Query(`SELECT id, workflow_id, current_step_id, title, description, task_data, assigned_to, created_by, created_at, updated_at 
-		FROM workflow_instances WHERE assigned_to = @p1 ORDER BY created_at DESC`, userID)
+		FROM workflow_instances WHERE assigned_to = $1 ORDER BY created_at DESC`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (r *WorkflowInstanceRepository) GetInstancesByUser(userID string) ([]*model
 // GetInstancesByStep retrieves all instances at a specific step
 func (r *WorkflowInstanceRepository) GetInstancesByStep(stepID string) ([]*models.AssignedTodo, error) {
 	rows, err := r.db.Query(`SELECT id, workflow_id, current_step_id, assigned_to, created_at, updated_at 
-		FROM workflow_instances WHERE current_step_id = @p1 ORDER BY created_at DESC`, stepID)
+		FROM workflow_instances WHERE current_step_id = $1 ORDER BY created_at DESC`, stepID)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func (r *WorkflowInstanceRepository) GetInstancesByStep(stepID string) ([]*model
 
 // UpdateInstanceStep updates the current step of an instance
 func (r *WorkflowInstanceRepository) UpdateInstanceStep(instanceID, newStepID string) error {
-	_, err := r.db.Exec(`UPDATE workflow_instances SET current_step_id = @p1, updated_at = GETDATE() WHERE id = @p2`,
+	_, err := r.db.Exec(`UPDATE workflow_instances SET current_step_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
 		newStepID, instanceID)
 	return err
 }
@@ -123,8 +123,8 @@ func (r *WorkflowInstanceRepository) UpdateInstanceStep(instanceID, newStepID st
 // UpdateInstance updates an instance
 func (r *WorkflowInstanceRepository) UpdateInstance(instance *models.AssignedTodo) error {
 	_, err := r.db.Exec(`UPDATE workflow_instances 
-		SET assigned_to = @p1, updated_at = @p2 
-		WHERE id = @p3`,
+		SET assigned_to = $1, updated_at = $2 
+		WHERE id = $3`,
 		instance.AssignedTo, instance.UpdatedAt, instance.ID)
 	return err
 }

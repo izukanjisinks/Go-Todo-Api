@@ -11,17 +11,17 @@ import (
 
 func ExampleRoutes() {
 	// Example 1: Require a specific permission
-	http.Handle("/api/users", middleware.RequirePermission(models.PermUsersRead)(
+	http.Handle("/api/users", middleware.RequirePermission(models.PermView)(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Handler code - only users with "users:read" permission can access
+			// Handler code - only users with "view" permission can access
 			w.Write([]byte("User list"))
 		}),
 	))
 
 	// Example 2: Require any of multiple permissions
 	http.Handle("/api/content", middleware.RequireAnyPermission(
-		models.PermContentRead,
-		models.PermContentCreate,
+		models.PermView,
+		models.PermCreate,
 	)(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Handler code - users with either permission can access
@@ -31,8 +31,8 @@ func ExampleRoutes() {
 
 	// Example 3: Require all permissions
 	http.Handle("/api/admin/settings", middleware.RequireAllPermissions(
-		models.PermSettingsRead,
-		models.PermSettingsUpdate,
+		models.PermView,
+		models.PermUpdate,
 	)(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Handler code - users must have both permissions
@@ -58,25 +58,25 @@ func ExampleRoutes() {
 
 		switch r.Method {
 		case http.MethodGet:
-			if !user.HasPermission(models.PermContentRead) {
+			if !user.HasPermission(models.PermView) {
 				http.Error(w, "Forbidden", http.StatusForbidden)
 				return
 			}
 			// Handle GET
 		case http.MethodPost:
-			if !user.HasPermission(models.PermContentCreate) {
+			if !user.HasPermission(models.PermCreate) {
 				http.Error(w, "Forbidden", http.StatusForbidden)
 				return
 			}
 			// Handle POST
 		case http.MethodPut:
-			if !user.HasPermission(models.PermContentUpdate) {
+			if !user.HasPermission(models.PermUpdate) {
 				http.Error(w, "Forbidden", http.StatusForbidden)
 				return
 			}
 			// Handle PUT
 		case http.MethodDelete:
-			if !user.HasPermission(models.PermContentDelete) {
+			if !user.HasPermission(models.PermDelete) {
 				http.Error(w, "Forbidden", http.StatusForbidden)
 				return
 			}

@@ -1,13 +1,13 @@
 CREATE TABLE users (
-                       id INT IDENTITY(1,1) PRIMARY KEY,
-                       username NVARCHAR(255) NOT NULL UNIQUE,
-                       email NVARCHAR(255) NOT NULL UNIQUE,
-                       password NVARCHAR(255) NOT NULL,
-                       is_admin BIT NOT NULL DEFAULT 0,
-                       session_token NVARCHAR(255),
-                       csrf_token NVARCHAR(255),
-                       created_at DATETIME2 DEFAULT GETDATE(),
-                       updated_at DATETIME2 DEFAULT GETDATE()
+                       id SERIAL PRIMARY KEY,
+                       username VARCHAR(255) NOT NULL UNIQUE,
+                       email VARCHAR(255) NOT NULL UNIQUE,
+                       password VARCHAR(255) NOT NULL,
+                       is_admin BOOLEAN NOT NULL DEFAULT FALSE,
+                       session_token VARCHAR(255),
+                       csrf_token VARCHAR(255),
+                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_users_username ON users(username);

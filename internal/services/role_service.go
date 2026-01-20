@@ -81,11 +81,21 @@ func (s *RoleService) CheckPermission(userID uuid.UUID, permission string) (bool
 		return false, err
 	}
 
-	for _, p := range permissions {
-		if p == permission {
-			return true, nil
-		}
+	if permissions == nil {
+		return false, nil
 	}
 
-	return false, nil
+	// Check permission based on action type
+	switch permission {
+	case "view", "read":
+		return permissions.View, nil
+	case "create":
+		return permissions.Create, nil
+	case "update":
+		return permissions.Update, nil
+	case "delete":
+		return permissions.Delete, nil
+	default:
+		return false, nil
+	}
 }

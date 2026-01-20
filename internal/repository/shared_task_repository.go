@@ -38,7 +38,7 @@ func (r *SharedTaskRepository) GetAll() ([]models.SharedTask, error) {
 
 func (r *SharedTaskRepository) GetById(id string) (*models.SharedTask, error) {
 	var sharedTask models.SharedTask
-	err := r.db.QueryRow(`SELECT CAST(id AS VARCHAR(36)), owner_id, shared_with_id, CAST(todo_id AS VARCHAR(36)) FROM shared_tasks WHERE id = @p1`, id).
+	err := r.db.QueryRow(`SELECT CAST(id AS VARCHAR(36)), owner_id, shared_with_id, CAST(todo_id AS VARCHAR(36)) FROM shared_tasks WHERE id = $1`, id).
 		Scan(&sharedTask.ID, &sharedTask.OwnerID, &sharedTask.SharedWithID, &sharedTask.TodoID)
 
 	if err == sql.ErrNoRows {
@@ -52,13 +52,13 @@ func (r *SharedTaskRepository) GetById(id string) (*models.SharedTask, error) {
 }
 
 func (r *SharedTaskRepository) Create(sharedTask *models.SharedTask) error {
-	_, err := r.db.Exec(`INSERT INTO shared_tasks (id, owner_id, shared_with_id, todo_id) VALUES (@p1, @p2, @p3, @p4)`,
+	_, err := r.db.Exec(`INSERT INTO shared_tasks (id, owner_id, shared_with_id, todo_id) VALUES ($1, $2, $3, $4)`,
 		sharedTask.ID, sharedTask.OwnerID, sharedTask.SharedWithID, sharedTask.TodoID)
 	return err
 }
 
 func (r *SharedTaskRepository) Delete(id string) (int64, error) {
-	result, err := r.db.Exec("DELETE FROM shared_tasks WHERE id = @p1", id)
+	result, err := r.db.Exec("DELETE FROM shared_tasks WHERE id = $1", id)
 	if err != nil {
 		return 0, err
 	}
@@ -68,7 +68,7 @@ func (r *SharedTaskRepository) Delete(id string) (int64, error) {
 }
 
 func (r *SharedTaskRepository) GetByOwnerId(ownerID int) ([]models.SharedTask, error) {
-	rows, err := r.db.Query(`SELECT CAST(id AS VARCHAR(36)), owner_id, shared_with_id, CAST(todo_id AS VARCHAR(36)) FROM shared_tasks WHERE owner_id = @p1`, ownerID)
+	rows, err := r.db.Query(`SELECT CAST(id AS VARCHAR(36)), owner_id, shared_with_id, CAST(todo_id AS VARCHAR(36)) FROM shared_tasks WHERE owner_id = $1`, ownerID)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (r *SharedTaskRepository) GetTodosBySharedId(sharedWithID int) ([]models.Sh
 		FROM todos t
 		JOIN shared_tasks s ON t.id = s.todo_id
 		JOIN users u ON s.owner_id = u.id
-		WHERE s.shared_with_id = @p1
+		WHERE s.shared_with_id = $1
 	`, sharedWithID)
 	if err != nil {
 		return nil, err
@@ -121,7 +121,7 @@ func (r *SharedTaskRepository) GetTodosBySharedId(sharedWithID int) ([]models.Sh
 }
 
 func (r *SharedTaskRepository) GetByTodoId(todoID string) ([]models.SharedTask, error) {
-	rows, err := r.db.Query(`SELECT CAST(id AS VARCHAR(36)), owner_id, shared_with_id, CAST(todo_id AS VARCHAR(36)) FROM shared_tasks WHERE todo_id = @p1`, todoID)
+	rows, err := r.db.Query(`SELECT CAST(id AS VARCHAR(36)), owner_id, shared_with_id, CAST(todo_id AS VARCHAR(36)) FROM shared_tasks WHERE todo_id = $1`, todoID)
 	if err != nil {
 		return nil, err
 	}

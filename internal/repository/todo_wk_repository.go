@@ -42,7 +42,7 @@ func (tw *TodoWorkflow) CreateTodo(id, title, description, assignedTo string) (*
 	}
 
 	_, err = tw.db.Exec(`INSERT INTO todo_tasks (id, title, description, assigned_to, status, created_at, updated_at) 
-		VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7)`,
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		todo.ID, todo.Title, todo.Description, todo.AssignedTo, todo.Status, todo.CreatedAt, todo.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create todo: %w", err)
@@ -67,7 +67,7 @@ func (tw *TodoWorkflow) SubmitForReview(id, submittedBy string) error {
 		return errors.New("only the assigned user can submit the todo for review")
 	}
 
-	_, err = tw.db.Exec(`UPDATE todo_tasks SET status = @p1, reviewed_by = @p2, updated_at = @p3 WHERE id = @p4`,
+	_, err = tw.db.Exec(`UPDATE todo_tasks SET status = $1, reviewed_by = $2, updated_at = $3 WHERE id = $4`,
 		models.StatusReview, submittedBy, time.Now(), id)
 	if err != nil {
 		return fmt.Errorf("failed to submit todo for review: %w", err)
@@ -91,7 +91,7 @@ func (tw *TodoWorkflow) ApprovedTodo(id, approvedBy string) error {
 		return errors.New("only the reviewer can approve the todo")
 	}
 
-	_, err = tw.db.Exec(`UPDATE todo_tasks SET status = @p1, approved_by = @p2, updated_at = @p3 WHERE id = @p4`,
+	_, err = tw.db.Exec(`UPDATE todo_tasks SET status = $1, approved_by = $2, updated_at = $3 WHERE id = $4`,
 		models.StatusApproved, approvedBy, time.Now(), id)
 	if err != nil {
 		return fmt.Errorf("failed to approve todo: %w", err)
@@ -112,7 +112,7 @@ func (tw *TodoWorkflow) RejectTodo(id, rejectedBy string) error {
 		return fmt.Errorf("todo must be in review status to reject, current status: %s", todo.Status)
 	}
 
-	_, err = tw.db.Exec(`UPDATE todo_tasks SET status = @p1, reviewed_by = NULL, updated_at = @p2 WHERE id = @p3`,
+	_, err = tw.db.Exec(`UPDATE todo_tasks SET status = $1, reviewed_by = NULL, updated_at = $2 WHERE id = $3`,
 		models.StatusDraft, time.Now(), id)
 	if err != nil {
 		return fmt.Errorf("failed to reject todo: %w", err)
@@ -124,7 +124,7 @@ func (tw *TodoWorkflow) RejectTodo(id, rejectedBy string) error {
 // GetTodosByUser returns all todos assigned to a user
 func (tw *TodoWorkflow) GetTodosByUser(userID string) ([]*models.TodoTask, error) {
 	rows, err := tw.db.Query(`SELECT id, title, description, assigned_to, status, reviewed_by, approved_by, created_at, updated_at 
-		FROM todo_tasks WHERE assigned_to = @p1`, userID)
+		FROM todo_tasks WHERE assigned_to = $1`, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get todos by user: %w", err)
 	}
@@ -154,7 +154,7 @@ func (tw *TodoWorkflow) GetTodosByUser(userID string) ([]*models.TodoTask, error
 // GetTodosByStatus returns all todos with a specific status
 func (tw *TodoWorkflow) GetTodosByStatus(status models.TodoStatus) ([]*models.TodoTask, error) {
 	rows, err := tw.db.Query(`SELECT id, title, description, assigned_to, status, reviewed_by, approved_by, created_at, updated_at 
-		FROM todo_tasks WHERE status = @p1`, status)
+		FROM todo_tasks WHERE status = $1`, status)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get todos by status: %w", err)
 	}
@@ -186,7 +186,7 @@ func (tw *TodoWorkflow) getTodo(id string) (*models.TodoTask, error) {
 	todo := &models.TodoTask{}
 	var reviewedBy, approvedBy sql.NullString
 	err := tw.db.QueryRow(`SELECT id, title, description, assigned_to, status, reviewed_by, approved_by, created_at, updated_at 
-		FROM todo_tasks WHERE id = @p1`, id).Scan(
+		FROM todo_tasks WHERE id = $1`, id).Scan(
 		&todo.ID, &todo.Title, &todo.Description, &todo.AssignedTo, &todo.Status,
 		&reviewedBy, &approvedBy, &todo.CreatedAt, &todo.UpdatedAt)
 

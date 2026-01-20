@@ -1,4 +1,4 @@
-DROP INDEX IF EXISTS idx_users_session_token ON users;
-DROP INDEX IF EXISTS idx_users_email ON users;
-DROP INDEX IF EXISTS idx_users_username ON users;
+DROP INDEX IF EXISTS idx_users_session_token;
+DROP INDEX IF EXISTS idx_users_email;
+DROP INDEX IF EXISTS idx_users_username;
 DROP TABLE IF EXISTS users;

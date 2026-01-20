@@ -21,7 +21,7 @@ func NewWorkflowRepository() *WorkflowRepository {
 // CreateWorkflow creates a new workflow template
 func (r *WorkflowRepository) CreateWorkflow(workflow *models.Workflow) error {
 	_, err := r.db.Exec(`INSERT INTO workflows (id, name, description, is_active, created_by, created_at, updated_at) 
-		VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7)`,
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		workflow.ID, workflow.Name, workflow.Description, workflow.IsActive, workflow.CreatedBy, workflow.CreatedAt, workflow.UpdatedAt)
 	return err
 }
@@ -30,7 +30,7 @@ func (r *WorkflowRepository) CreateWorkflow(workflow *models.Workflow) error {
 func (r *WorkflowRepository) GetWorkflow(id string) (*models.Workflow, error) {
 	workflow := &models.Workflow{}
 	err := r.db.QueryRow(`SELECT id, name, description, is_active, created_by, created_at, updated_at 
-		FROM workflows WHERE id = @p1`, id).Scan(
+		FROM workflows WHERE id = $1`, id).Scan(
 		&workflow.ID, &workflow.Name, &workflow.Description, &workflow.IsActive,
 		&workflow.CreatedBy, &workflow.CreatedAt, &workflow.UpdatedAt)
 
@@ -70,7 +70,7 @@ func (r *WorkflowRepository) CreateStep(step *models.WorkflowStep) error {
 	}
 
 	_, err = r.db.Exec(`INSERT INTO workflow_steps (id, workflow_id, step_name, step_order, initial, final, allowed_roles, created_at) 
-		VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8)`,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, @p8)`,
 		step.ID, step.WorkflowID, step.StepName, step.StepOrder, step.Initial, step.Final, string(allowedRolesJSON), step.CreatedAt)
 	return err
 }
@@ -78,7 +78,7 @@ func (r *WorkflowRepository) CreateStep(step *models.WorkflowStep) error {
 // GetWorkflowSteps retrieves all steps for a workflow
 func (r *WorkflowRepository) GetWorkflowSteps(workflowID string) ([]*models.WorkflowStep, error) {
 	rows, err := r.db.Query(`SELECT id, workflow_id, step_name, step_order, initial, final, allowed_roles, created_at 
-		FROM workflow_steps WHERE workflow_id = @p1 ORDER BY step_order`, workflowID)
+		FROM workflow_steps WHERE workflow_id = $1 ORDER BY step_order`, workflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func (r *WorkflowRepository) GetStep(stepID string) (*models.WorkflowStep, error
 	step := &models.WorkflowStep{}
 	var allowedRolesJSON string
 	err := r.db.QueryRow(`SELECT id, workflow_id, step_name, step_order, initial, final, allowed_roles, created_at 
-		FROM workflow_steps WHERE id = @p1`, stepID).Scan(
+		FROM workflow_steps WHERE id = $1`, stepID).Scan(
 		&step.ID, &step.WorkflowID, &step.StepName, &step.StepOrder,
 		&step.Initial, &step.Final, &allowedRolesJSON, &step.CreatedAt)
 
@@ -131,7 +131,7 @@ func (r *WorkflowRepository) GetStartStep(workflowID string) (*models.WorkflowSt
 	step := &models.WorkflowStep{}
 	var allowedRolesJSON string
 	err := r.db.QueryRow(`SELECT id, workflow_id, step_name, step_order, initial, final, allowed_roles, created_at 
-		FROM workflow_steps WHERE workflow_id = @p1 AND initial = 1`, workflowID).Scan(
+		FROM workflow_steps WHERE workflow_id = $1 AND initial = 1`, workflowID).Scan(
 		&step.ID, &step.WorkflowID, &step.StepName, &step.StepOrder,
 		&step.Initial, &step.Final, &allowedRolesJSON, &step.CreatedAt)
 
@@ -152,7 +152,7 @@ func (r *WorkflowRepository) GetStartStep(workflowID string) (*models.WorkflowSt
 // CreateTransition creates a new workflow transition
 func (r *WorkflowRepository) CreateTransition(transition *models.WorkflowTransition) error {
 	_, err := r.db.Exec(`INSERT INTO workflow_transitions (id, workflow_id, from_step_id, to_step_id, action_name, condition_type, condition_value, created_at) 
-		VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8)`,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, @p8)`,
 		transition.ID, transition.WorkflowID, transition.FromStepID, transition.ToStepID,
 		transition.ActionName, transition.ConditionType, transition.ConditionValue, transition.CreatedAt)
 	return err
@@ -161,7 +161,7 @@ func (r *WorkflowRepository) CreateTransition(transition *models.WorkflowTransit
 // GetTransitions retrieves all transitions for a workflow
 func (r *WorkflowRepository) GetTransitions(workflowID string) ([]*models.WorkflowTransition, error) {
 	rows, err := r.db.Query(`SELECT id, workflow_id, from_step_id, to_step_id, action_name, condition_type, condition_value, created_at 
-		FROM workflow_transitions WHERE workflow_id = @p1`, workflowID)
+		FROM workflow_transitions WHERE workflow_id = $1`, workflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +190,7 @@ func (r *WorkflowRepository) GetTransitions(workflowID string) ([]*models.Workfl
 // GetAvailableTransitions retrieves possible transitions from a specific step
 func (r *WorkflowRepository) GetAvailableTransitions(workflowID, fromStepID string) ([]*models.WorkflowTransition, error) {
 	rows, err := r.db.Query(`SELECT id, workflow_id, from_step_id, to_step_id, action_name, condition_type, condition_value, created_at 
-		FROM workflow_transitions WHERE workflow_id = @p1 AND from_step_id = @p2`, workflowID, fromStepID)
+		FROM workflow_transitions WHERE workflow_id = $1 AND from_step_id = $2`, workflowID, fromStepID)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +221,7 @@ func (r *WorkflowRepository) FindTransition(workflowID, fromStepID, actionName s
 	transition := &models.WorkflowTransition{}
 	var conditionType, conditionValue sql.NullString
 	err := r.db.QueryRow(`SELECT id, workflow_id, from_step_id, to_step_id, action_name, condition_type, condition_value, created_at 
-		FROM workflow_transitions WHERE workflow_id = @p1 AND from_step_id = @p2 AND action_name = @p3`,
+		FROM workflow_transitions WHERE workflow_id = $1 AND from_step_id = $2 AND action_name = $3`,
 		workflowID, fromStepID, actionName).Scan(
 		&transition.ID, &transition.WorkflowID, &transition.FromStepID, &transition.ToStepID,
 		&transition.ActionName, &conditionType, &conditionValue, &transition.CreatedAt)

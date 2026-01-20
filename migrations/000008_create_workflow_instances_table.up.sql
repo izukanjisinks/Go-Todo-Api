@@ -1,14 +1,14 @@
 CREATE TABLE workflow_instances (
-    id NVARCHAR(36) PRIMARY KEY,
-    workflow_id NVARCHAR(36) NOT NULL,
-    current_step_id NVARCHAR(36) NOT NULL,
-    title NVARCHAR(200) NOT NULL,
-    description NVARCHAR(500),
-    task_data NVARCHAR(MAX), -- JSON for additional fields
-    assigned_to NVARCHAR(100) NOT NULL,
-    created_by NVARCHAR(100) NOT NULL,
-    created_at DATETIME2 DEFAULT GETDATE(),
-    updated_at DATETIME2 DEFAULT GETDATE(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workflow_id UUID NOT NULL,
+    current_step_id UUID NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    description VARCHAR(500),
+    task_data TEXT, -- JSON for additional fields
+    assigned_to VARCHAR(100) NOT NULL,
+    created_by VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_workflow_instances_workflow_id FOREIGN KEY (workflow_id) REFERENCES workflows(id),
     CONSTRAINT fk_workflow_instances_current_step FOREIGN KEY (current_step_id) REFERENCES workflow_steps(id)
 );

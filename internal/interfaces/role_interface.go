@@ -15,5 +15,5 @@ type RoleRepositoryInterface interface {
 	UpdateRole(role *models.Role) error
 	DeleteRole(roleID uuid.UUID) error
 	AssignRoleToUser(userID, roleID uuid.UUID) error
-	GetUserPermissions(userID uuid.UUID) ([]string, error)
+	GetUserPermissions(userID uuid.UUID) (*models.Permissions, error)
 }

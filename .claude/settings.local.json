@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(go build:*)"
+      "Bash(go build:*)",
+      "Bash(make migrate-up:*)",
+      "Bash(migrate:*)",
+      "Bash(make migrate-force:*)",
+      "Bash(sqlcmd:*)",
+      "Bash(ls:*)"
     ]
   }
 }
