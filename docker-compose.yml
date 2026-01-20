@@ -1,15 +1,59 @@
 services:
-  api:
-    image: todo-api:latest
-    ports:
-      - "8080:8080"
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: todo-postgres
+    restart: unless-stopped
     environment:
-      - DB_SERVER=host.docker.internal
-      - DB_PORT=1433
-      - DB_NAME=Todos
-      - DB_TRUSTED_CONNECTION=no
-      - DB_USER=sa
-      - DB_PASSWORD=YourActualSaPassword
-      - SERVER_PORT=8080
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Database Migrations
+  migrate:
+    image: migrate/migrate
+    container_name: todo-migrate
+    volumes:
+      - ./migrations:/migrations
+    command: [
+      "-path", "/migrations",
+      "-database", "postgres://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?sslmode=${DB_SSLMODE}",
+      "up"
+    ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+
+  # Go API
+  api:
+    build: .
+    container_name: todo-api
+    restart: unless-stopped
+    ports:
+      - "${SERVER_PORT}:8080"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
+      - SERVER_PORT=${SERVER_PORT}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_data:
