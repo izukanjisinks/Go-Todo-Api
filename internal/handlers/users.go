@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"todo-api/internal/interfaces"
 	"todo-api/internal/models"
+	"todo-api/internal/validations"
 	"todo-api/pkg/utils"
 
 	"github.com/google/uuid"
@@ -54,8 +55,10 @@ func (h *UsersHandler) Register(w http.ResponseWriter, r *http.Request) {
 	password := req.Password
 	isAdmin := req.IsAdmin
 
-	if username == "" || email == "" || password == "" {
-		utils.RespondError(w, http.StatusBadRequest, "Invalid input, username, email and password are required")
+	// Validate registration input
+	err = validations.ValidateRegister(username, email, password)
+	if err != nil {
+		utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -95,7 +98,14 @@ func (h *UsersHandler) Login(w http.ResponseWriter, r *http.Request) {
 	email := req.Email
 	password := req.Password
 
+	err = validations.ValidateLogin(email, password)
+	if err != nil {
+		utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	response, err := h.service.Login(email, password)
+
 	if err != nil {
 		utils.RespondError(w, http.StatusUnauthorized, err.Error())
 		return
