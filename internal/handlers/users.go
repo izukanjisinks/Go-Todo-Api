@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"todo-api/internal/interfaces"
 	"todo-api/internal/models"
 	"todo-api/internal/validations"
@@ -120,12 +121,28 @@ func (h *UsersHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	users, err := h.service.GetAllUsers()
+	page := 1
+	pageSize := 20
+
+	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+
+	if pageSizeStr := r.URL.Query().Get("page_size"); pageSizeStr != "" {
+		if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 && ps <= 100 {
+			pageSize = ps
+		}
+	}
+
+	paginatedResponse, err := h.service.GetUsersPaginated(page, pageSize)
 	if err != nil {
 		utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	utils.RespondJSON(w, http.StatusOK, users)
+
+	utils.RespondJSON(w, http.StatusOK, paginatedResponse)
 }
 
 func (h *UsersHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {

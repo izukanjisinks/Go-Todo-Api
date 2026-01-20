@@ -9,6 +9,7 @@ type UserInterface interface {
 	Register(user *models.User) error
 	Login(email, password string) (map[string]interface{}, error)
 	GetAllUsers() ([]models.User, error)
+	GetUsersPaginated(page, pageSize int) (*models.PaginatedResponse, error)
 	GetUserByID(id interface{}) (*models.User, error)
 	UpdateUser(updates *models.User) (*models.User, error)
 	DeleteUser(id int) error

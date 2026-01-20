@@ -111,6 +111,35 @@ func (s *UserService) GetAllUsers() ([]models.User, error) {
 	return s.repo.GetAllUsers()
 }
 
+// GetUsersPaginated retrieves users with pagination
+func (s *UserService) GetUsersPaginated(page, pageSize int) (*models.PaginatedResponse, error) {
+	// Validate pagination parameters
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+
+	// Calculate offset
+	offset := (page - 1) * pageSize
+
+	// Get total count
+	totalCount, err := s.repo.GetUsersCount()
+	if err != nil {
+		return nil, err
+	}
+
+	// Get paginated users
+	users, err := s.repo.GetUsersPaginated(pageSize, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create paginated response
+	return models.NewPaginatedResponse(users, page, pageSize, totalCount), nil
+}
+
 // GetUserByID retrieves a user by ID
 func (s *UserService) GetUserByID(id interface{}) (*models.User, error) {
 	return s.repo.GetUserByID(id)

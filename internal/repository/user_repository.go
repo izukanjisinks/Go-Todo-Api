@@ -462,6 +462,110 @@ func (r *UserRepository) GetAllUsers() ([]models.User, error) {
 	return users, nil
 }
 
+// GetUsersPaginated retrieves users with pagination support
+func (r *UserRepository) GetUsersPaginated(limit, offset int) ([]models.User, error) {
+	query := `
+		SELECT
+			u.id, u.username, u.email, u.password, u.is_admin, u.is_active, u.created_at, u.updated_at, u.role_id,
+			r.role_id::TEXT as role_id_str, r.name, r.description, r.permission_id::TEXT as permission_id_str,
+			p.id::TEXT as perm_id, p.name as perm_name, p.description as perm_description,
+			p.view, p.create, p.update, p.delete
+		FROM users u
+		LEFT JOIN roles r ON u.role_id = r.role_id
+		LEFT JOIN permissions p ON r.permission_id = p.id
+		ORDER BY u.created_at DESC
+		LIMIT $1 OFFSET $2
+	`
+	rows, err := r.db.Query(query, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []models.User
+	for rows.Next() {
+		var user models.User
+		var roleID sql.NullString
+		var roleIDStr sql.NullString
+		var roleName sql.NullString
+		var roleDescription sql.NullString
+		var permissionIDStr sql.NullString
+		var permIDStr sql.NullString
+		var permName sql.NullString
+		var permDescription sql.NullString
+		var permView sql.NullBool
+		var permCreate sql.NullBool
+		var permUpdate sql.NullBool
+		var permDelete sql.NullBool
+
+		err := rows.Scan(
+			&user.UserID, &user.Username, &user.Email, &user.Password, &user.IsAdmin, &user.IsActive, &user.CreatedAt, &user.UpdatedAt, &roleID,
+			&roleIDStr, &roleName, &roleDescription, &permissionIDStr,
+			&permIDStr, &permName, &permDescription, &permView, &permCreate, &permUpdate, &permDelete,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// Parse role_id from the user table
+		if roleID.Valid {
+			parsedRoleID, err := uuid.Parse(roleID.String)
+			if err == nil {
+				user.RoleID = &parsedRoleID
+			}
+		}
+
+		// Populate role if it exists
+		if roleIDStr.Valid && roleName.Valid {
+			parsedRoleUUID, err := uuid.Parse(roleIDStr.String)
+			if err == nil {
+				role := &models.Role{
+					RoleId:      parsedRoleUUID,
+					Name:        roleName.String,
+					Description: roleDescription.String,
+				}
+
+				// Parse permission_id if exists
+				if permissionIDStr.Valid {
+					parsedPermissionID, err := uuid.Parse(permissionIDStr.String)
+					if err == nil {
+						role.PermissionId = &parsedPermissionID
+					}
+				}
+
+				// Populate permission object if exists
+				if permIDStr.Valid && permName.Valid {
+					parsedPermID, err := uuid.Parse(permIDStr.String)
+					if err == nil {
+						role.Permission = &models.Permissions{
+							Id:          parsedPermID,
+							Name:        permName.String,
+							Description: permDescription.String,
+							View:        permView.Bool,
+							Create:      permCreate.Bool,
+							Update:      permUpdate.Bool,
+							Delete:      permDelete.Bool,
+						}
+					}
+				}
+
+				user.Role = role
+			}
+		}
+
+		users = append(users, user)
+	}
+	return users, nil
+}
+
+// GetUsersCount returns the total count of users
+func (r *UserRepository) GetUsersCount() (int, error) {
+	var count int
+	query := `SELECT COUNT(*) FROM users`
+	err := r.db.QueryRow(query).Scan(&count)
+	return count, err
+}
+
 // UpdateUser updates an existing user in the database and returns the updated user
 func (r *UserRepository) UpdateUser(user *models.User) (*models.User, error) {
 	query := `UPDATE users SET username = $1, email = $2, is_admin = $3, is_active = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5`
