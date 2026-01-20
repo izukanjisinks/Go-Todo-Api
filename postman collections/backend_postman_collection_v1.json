@@ -1,0 +1,711 @@
+{
+	"info": {
+		"_postman_id": "todo-api-rbac-collection",
+		"name": "Todo API with RBAC",
+		"description": "Complete API collection for Todo API with Role-Based Access Control",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "role_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "todo_id",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.user && jsonData.user.id) {",
+									"        pm.collectionVariables.set('user_id', jsonData.user.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"testuser\",\n    \"email\": \"testuser@example.com\",\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/register",
+							"host": ["{{base_url}}"],
+							"path": ["register"]
+						},
+						"description": "Register a new user account"
+					},
+					"response": []
+				},
+				{
+					"name": "Login User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.token) {",
+									"        pm.collectionVariables.set('jwt_token', jsonData.token);",
+									"    }",
+									"    if (jsonData.user && jsonData.user.id) {",
+									"        pm.collectionVariables.set('user_id', jsonData.user.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"testuser@example.com\",\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/login",
+							"host": ["{{base_url}}"],
+							"path": ["login"]
+						},
+						"description": "Login and receive JWT token"
+					},
+					"response": []
+				},
+				{
+					"name": "Logout User",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/logout",
+							"host": ["{{base_url}}"],
+							"path": ["logout"]
+						},
+						"description": "Logout current user"
+					},
+					"response": []
+				},
+				{
+					"name": "Protected Route Test",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/protected",
+							"host": ["{{base_url}}"],
+							"path": ["protected"]
+						},
+						"description": "Test protected route with JWT"
+					},
+					"response": []
+				}
+			],
+			"description": "User authentication endpoints"
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users",
+							"host": ["{{base_url}}"],
+							"path": ["users"]
+						},
+						"description": "Get list of all users"
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user_id\": \"{{user_id}}\",\n    \"username\": \"Izukanji C Sinkolongo\",\n    \"email\": \"izukanjisinkolongo+7@gmail.com\",\n    \"is_admin\": false,\n    \"role_id\": null,\n    \"is_active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users/update",
+							"host": ["{{base_url}}"],
+							"path": ["users", "update"]
+						},
+						"description": "Update user information"
+					},
+					"response": []
+				}
+			],
+			"description": "User management endpoints"
+		},
+		{
+			"name": "Roles (RBAC)",
+			"item": [
+				{
+					"name": "Get All Roles",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.length > 0 && jsonData[0].role_id) {",
+									"        pm.collectionVariables.set('role_id', jsonData[0].role_id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/roles",
+							"host": ["{{base_url}}"],
+							"path": ["roles"]
+						},
+						"description": "Get all available roles"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Role by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/roles/{{role_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["roles", "{{role_id}}"]
+						},
+						"description": "Get specific role details by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Role",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.role_id) {",
+									"        pm.collectionVariables.set('role_id', jsonData.role_id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Custom Role\",\n    \"description\": \"A custom role for testing\",\n    \"permissions\": [\n        \"users:read\",\n        \"content:read\",\n        \"content:create\"\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/roles",
+							"host": ["{{base_url}}"],
+							"path": ["roles"]
+						},
+						"description": "Create a new role with permissions"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Role",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Role\",\n    \"description\": \"Updated description\",\n    \"permissions\": [\n        \"users:read\",\n        \"users:create\",\n        \"content:read\",\n        \"content:create\",\n        \"content:update\"\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/roles/{{role_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["roles", "{{role_id}}"]
+						},
+						"description": "Update an existing role"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Role",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/roles/{{role_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["roles", "{{role_id}}"]
+						},
+						"description": "Delete a role by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Role to User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"role_id\": \"{{role_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}/role",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{user_id}}", "role"]
+						},
+						"description": "Assign a role to a specific user"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Permissions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}/permissions",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{user_id}}", "permissions"]
+						},
+						"description": "Get all permissions for a specific user"
+					},
+					"response": []
+				}
+			],
+			"description": "Role-Based Access Control endpoints"
+		},
+		{
+			"name": "Todos",
+			"item": [
+				{
+					"name": "Get All Todos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/todos",
+							"host": ["{{base_url}}"],
+							"path": ["todos"]
+						},
+						"description": "Get all todos"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Todo by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/todos/{{todo_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["todos", "{{todo_id}}"]
+						},
+						"description": "Get specific todo by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Todo",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.id) {",
+									"        pm.collectionVariables.set('todo_id', jsonData.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Test Todo\",\n    \"description\": \"This is a test todo\",\n    \"completed\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/todos",
+							"host": ["{{base_url}}"],
+							"path": ["todos"]
+						},
+						"description": "Create a new todo"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Todo",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Updated Todo\",\n    \"description\": \"Updated description\",\n    \"completed\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/todos/{{todo_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["todos", "{{todo_id}}"]
+						},
+						"description": "Update an existing todo"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Todo",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/todos/{{todo_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["todos", "{{todo_id}}"]
+						},
+						"description": "Delete a todo by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Todos by User ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/todos/user",
+							"host": ["{{base_url}}"],
+							"path": ["todos", "user"]
+						},
+						"description": "Get all todos for current user"
+					},
+					"response": []
+				}
+			],
+			"description": "Todo management endpoints"
+		},
+		{
+			"name": "Shared Tasks",
+			"item": [
+				{
+					"name": "Get All Shared Tasks",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/shared-tasks",
+							"host": ["{{base_url}}"],
+							"path": ["shared-tasks"]
+						},
+						"description": "Get all shared tasks"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Shared Task by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/shared-tasks/{{task_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["shared-tasks", "{{task_id}}"]
+						},
+						"description": "Get specific shared task by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Shared Task",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Shared Task\",\n    \"description\": \"A task shared with team\",\n    \"assigned_to\": [\"{{user_id}}\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/shared-tasks",
+							"host": ["{{base_url}}"],
+							"path": ["shared-tasks"]
+						},
+						"description": "Create a new shared task"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Shared Tasks by Owner",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/shared-tasks/owner",
+							"host": ["{{base_url}}"],
+							"path": ["shared-tasks", "owner"]
+						},
+						"description": "Get shared tasks owned by current user"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Shared Tasks by Todo ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/shared-tasks/todo",
+							"host": ["{{base_url}}"],
+							"path": ["shared-tasks", "todo"]
+						},
+						"description": "Get shared tasks by todo ID"
+					},
+					"response": []
+				}
+			],
+			"description": "Shared task management endpoints"
+		},
+		{
+			"name": "Workflow (Old)",
+			"item": [
+				{
+					"name": "Create Todo Task",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Workflow Todo\",\n    \"description\": \"Todo with workflow\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/workflow/todos",
+							"host": ["{{base_url}}"],
+							"path": ["workflow", "todos"]
+						},
+						"description": "Create a todo with workflow"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Todos by User",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/workflow/todos/user",
+							"host": ["{{base_url}}"],
+							"path": ["workflow", "todos", "user"]
+						},
+						"description": "Get workflow todos for current user"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Todos by Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/workflow/todos/status?status=pending",
+							"host": ["{{base_url}}"],
+							"path": ["workflow", "todos", "status"],
+							"query": [
+								{
+									"key": "status",
+									"value": "pending"
+								}
+							]
+						},
+						"description": "Get todos by workflow status"
+					},
+					"response": []
+				},
+				{
+					"name": "Submit Todo for Review",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/workflow/todos/{{todo_id}}/submit/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["workflow", "todos", "{{todo_id}}", "submit", "{{user_id}}"]
+						},
+						"description": "Submit todo for review"
+					},
+					"response": []
+				},
+				{
+					"name": "Approve Todo",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/workflow/todos/{{todo_id}}/approve/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["workflow", "todos", "{{todo_id}}", "approve", "{{user_id}}"]
+						},
+						"description": "Approve a todo"
+					},
+					"response": []
+				},
+				{
+					"name": "Reject Todo",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/workflow/todos/{{todo_id}}/reject/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["workflow", "todos", "{{todo_id}}", "reject", "{{user_id}}"]
+						},
+						"description": "Reject a todo"
+					},
+					"response": []
+				}
+			],
+			"description": "Old hardcoded workflow endpoints"
+		},
+		{
+			"name": "Health Check",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": ["{{base_url}}"],
+							"path": ["health"]
+						},
+						"description": "Check API health status"
+					},
+					"response": []
+				}
+			],
+			"description": "Health check endpoint"
+		}
+	]
+}

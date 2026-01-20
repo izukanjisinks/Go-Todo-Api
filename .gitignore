@@ -1,0 +1,13 @@
+# Environment variables (contains secrets!)
+.env
+
+# Binaries
+todo-api
+*.exe
+
+# IDE
+.idea/
+.vscode/
+
+# Temp files
+tmpclaude-*

@@ -6,25 +6,25 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"todo-api/internal/interfaces"
 	"todo-api/internal/models"
-	"todo-api/internal/repository"
 	"todo-api/pkg/utils"
 
 	"github.com/google/uuid"
 )
 
 type TodoHandler struct {
-	repo *repository.TodoRepository
+	service interfaces.TodoInterface
 }
 
-func NewTodoHandler() *TodoHandler {
+func NewTodoHandler(service interfaces.TodoInterface) *TodoHandler {
 	return &TodoHandler{
-		repo: repository.NewTodoRepository(),
+		service: service,
 	}
 }
 
 func (h *TodoHandler) GetAllTodos(w http.ResponseWriter, r *http.Request) {
-	todos, err := h.repo.GetAll()
+	todos, err := h.service.GetAllTodos()
 	if err != nil {
 		utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -57,7 +57,7 @@ func (h *TodoHandler) CreateTodo(w http.ResponseWriter, r *http.Request) {
 
 	newTodo.Id = uuid.New().String()
 
-	err = h.repo.Create(&newTodo)
+	err = h.service.CreateTodo(&newTodo)
 	if err != nil {
 		utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -80,7 +80,7 @@ func (h *TodoHandler) TodosHandler(w http.ResponseWriter, r *http.Request) {
 func (h *TodoHandler) GetTodoById(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Path[len("/todos/"):]
 
-	todo, err := h.repo.GetById(id)
+	todo, err := h.service.GetTodoByID(id)
 	if err != nil {
 		utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -109,7 +109,7 @@ func (h *TodoHandler) UpdateTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rowsAffected, err := h.repo.Update(id, &updatedTodo)
+	rowsAffected, err := h.service.UpdateTodo(id, &updatedTodo)
 	if err != nil {
 		utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -126,7 +126,7 @@ func (h *TodoHandler) UpdateTodo(w http.ResponseWriter, r *http.Request) {
 func (h *TodoHandler) DeleteTodo(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Path[len("/todos/"):]
 
-	rowsAffected, err := h.repo.Delete(id)
+	rowsAffected, err := h.service.DeleteTodo(id)
 	if err != nil {
 		utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -163,15 +163,10 @@ func (h *TodoHandler) GetTodosByUserId(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert user_id to int
-	var userID int
-	_, err := fmt.Sscanf(userIDStr, "%d", &userID)
-	if err != nil {
-		utils.RespondError(w, http.StatusBadRequest, "Invalid user_id format")
-		return
-	}
+	userID := userIDStr
 
 	// Get todos from repository
-	todos, err := h.repo.GetByUserId(userID)
+	todos, err := h.service.GetTodosByUserID(userID)
 	if err != nil {
 		utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return

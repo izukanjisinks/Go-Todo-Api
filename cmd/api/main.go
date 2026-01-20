@@ -7,10 +7,57 @@ import (
 	"todo-api/internal/config"
 	"todo-api/internal/database"
 	"todo-api/internal/handlers"
-	"todo-api/internal/middleware"
+	"todo-api/internal/models"
+	"todo-api/internal/repository"
+	"todo-api/internal/routes"
+	"todo-api/internal/services"
 )
 
-//var users = map[string]Login{}
+func seedDefaultAdmin(userService *services.UserService, roleService *services.RoleService) {
+
+	superAdmin, err := roleService.GetRoleByName(models.RoleSuperAdmin)
+	if err != nil || superAdmin == nil {
+		log.Println("Warning: Could not find super admin role, skipping default admin creation...")
+		return
+	}
+
+	user, _ := userService.GetUserByRoleId(superAdmin.RoleId)
+	hasSuperAdmin := false
+
+	if user != nil {
+		if user.Role != nil && user.Role.Name == models.RoleSuperAdmin {
+			hasSuperAdmin = true
+		}
+	}
+
+	if !hasSuperAdmin {
+		log.Println("No super admin found, creating default super admin...")
+	} else {
+		log.Println("Super admin user already exists, skipping creation...")
+		return
+	}
+
+	adminUser := &models.User{
+		Username: "admin",
+		Email:    "admin@backend.com",
+		RoleID:   &superAdmin.RoleId,
+		IsAdmin:  true,
+		Login: models.Login{
+			Password: "Admin@123",
+		},
+	}
+
+	err = userService.Register(adminUser)
+
+	if err != nil {
+		log.Printf("Warning, could not create default admin user %v\n", err)
+	} else {
+		log.Println("Default admin user created successfully!")
+		log.Println("Email: admin@backend.com")
+		log.Println("Password: Admin@123")
+	}
+
+}
 
 func main() {
 	// Load configuration
@@ -26,26 +73,44 @@ func main() {
 	}
 	defer database.Close()
 
-	// Initialize handlers
-	todoHandler := handlers.NewTodoHandler()
-	userHandler := handlers.NewUserRepository()
-	sharedTaskHandler := handlers.NewSharedTaskHandler()
+	// Initialize repositories
+	userRepo := repository.NewUserRepository()
+	todoRepo := repository.NewTodoRepository()
+	roleRepo := repository.NewRoleRepository()
 
-	// Setup routes
-	http.HandleFunc("/health", middleware.CORS(handlers.HealthHandler))
-	http.HandleFunc("/todos", middleware.CORS(todoHandler.TodosHandler))
-	http.HandleFunc("/todos/", middleware.CORS(todoHandler.TodoByIdHandler))
-	http.HandleFunc("/users", middleware.CORS(userHandler.GetUsers))
-	http.HandleFunc("/register", middleware.CORS(userHandler.Register))
-	http.HandleFunc("/login", middleware.CORS(userHandler.Login))
-	http.HandleFunc("/logout", middleware.CORS(handlers.Logout))
-	http.HandleFunc("/protected", middleware.CORS(handlers.Protected))
-	http.HandleFunc("/todos/user", middleware.CORS(todoHandler.GetTodosByUserId))
-	http.HandleFunc("/shared-tasks", middleware.CORS(sharedTaskHandler.SharedTasksHandler))
-	http.HandleFunc("/shared-tasks/", middleware.CORS(sharedTaskHandler.SharedTaskByIdHandler))
-	http.HandleFunc("/shared-tasks/owner", middleware.CORS(sharedTaskHandler.GetSharedTasksByOwnerId))
-	http.HandleFunc("/shared-tasks/id", middleware.CORS(sharedTaskHandler.GetSharedTasksById))
-	http.HandleFunc("/shared-tasks/todo", middleware.CORS(sharedTaskHandler.GetSharedTasksByTodoId))
+	// Initialize services with repository dependencies
+	userService := services.NewUserService(userRepo)
+	todoService := services.NewTodoService(todoRepo)
+	roleService := services.NewRoleService(roleRepo)
+
+	// Initialize predefined roles (run once at startup)
+	err = roleService.InitializePredefinedRoles()
+	if err != nil {
+		log.Println("Warning: Failed to initialize predefined roles:", err)
+	}
+
+	seedDefaultAdmin(userService, roleService)
+
+	// Initialize handlers with service dependencies
+	todoHandler := handlers.NewTodoHandler(todoService)
+	userHandler := handlers.NewUsersHandler(userService)
+	roleHandler := handlers.NewRoleHandler(roleService)
+	sharedTaskHandler := handlers.NewSharedTaskHandler()
+	todoWorkflowHandler := handlers.NewTodoWorkflowHandler()
+	workflowAdminHandler := handlers.NewWorkflowAdminHandler()
+	workflowInstanceHandler := handlers.NewWorkflowInstanceHandler()
+
+	// Register all routes using the routes package
+	routes.RegisterRoutes(
+		todoHandler,
+		userHandler,
+		sharedTaskHandler,
+		roleHandler,
+		todoWorkflowHandler,
+		workflowAdminHandler,
+		workflowInstanceHandler,
+	)
+
 	// Start server
 	port := ":" + cfg.ServerPort
 	fmt.Printf("🚀 Server listening on port %s\n", cfg.ServerPort)

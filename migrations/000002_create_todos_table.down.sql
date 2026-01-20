@@ -1,3 +1,3 @@
-DROP INDEX IF EXISTS idx_todos_completed ON todos;
-DROP INDEX IF EXISTS idx_todos_user_id ON todos;
+DROP INDEX IF EXISTS idx_todos_completed;
+DROP INDEX IF EXISTS idx_todos_user_id;
 DROP TABLE IF EXISTS todos;

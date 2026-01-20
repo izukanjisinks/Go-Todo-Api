@@ -1,0 +1,250 @@
+{
+  "info": {
+    "_postman_id": "c4c40d9c-ff23-4d92-ae90-72f718a61022",
+    "name": "Dynamic Workflow System API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Postman collection for the Dynamic Workflow System API"
+  },
+  "item": [
+    {
+      "name": "Workflows",
+      "item": [
+        {
+          "name": "Create Workflow",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Standard Approval Flow\",\n  \"description\": \"Three-step approval process\",\n  \"created_by\": \"admin_user\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/workflows",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "workflows"]
+            }
+          }
+        },
+        {
+          "name": "Get All Workflows",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/api/workflows",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "workflows"]
+            }
+          }
+        },
+        {
+          "name": "Get Single Workflow",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/api/workflows/:workflowId",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "workflows", ":workflowId"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Workflow Steps",
+      "item": [
+        {
+          "name": "Create Step",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"step_name\": \"Draft\",\n  \"step_order\": 1,\n  \"is_start_step\": true,\n  \"is_end_step\": false,\n  \"allowed_roles\": [\"employee\", \"manager\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/workflows/:workflowId/steps",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "workflows", ":workflowId", "steps"]
+            }
+          }
+        },
+        {
+          "name": "Get Workflow Steps",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/api/workflows/:workflowId/steps",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "workflows", ":workflowId", "steps"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Workflow Transitions",
+      "item": [
+        {
+          "name": "Create Transition",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from_step_id\": \"draft-step-uuid\",\n  \"to_step_id\": \"review-step-uuid\",\n  \"action_name\": \"submit\",\n  \"condition_type\": \"assigned_user_only\",\n  \"condition_value\": \"\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/workflows/:workflowId/transitions",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "workflows", ":workflowId", "transitions"]
+            }
+          }
+        },
+        {
+          "name": "Get Workflow Transitions",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/api/workflows/:workflowId/transitions",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "workflows", ":workflowId", "transitions"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "Start Task",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workflow_id\": \"workflow-uuid\",\n  \"title\": \"Complete project documentation\",\n  \"description\": \"Write comprehensive API docs\",\n  \"task_data\": \"{\\\"priority\\\": \\\"high\\\", \\\"deadline\\\": \\\"2024-12-31\\\"}\",\n  \"assigned_to\": \"user123\",\n  \"created_by\": \"manager456\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/tasks",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "tasks"]
+            }
+          }
+        },
+        {
+          "name": "Get Task With Details",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/api/tasks/:instanceId?user_id=user123",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "tasks", ":instanceId"],
+              "query": [{ "key": "user_id", "value": "user123" }]
+            }
+          }
+        },
+        {
+          "name": "Execute Task Action",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action_name\": \"submit\",\n  \"user_id\": \"user123\",\n  \"comments\": \"Ready for review\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/tasks/:instanceId/execute",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "tasks", ":instanceId", "execute"]
+            }
+          }
+        },
+        {
+          "name": "Get Task Available Actions",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/api/tasks/:instanceId/actions?user_id=user123",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "tasks", ":instanceId", "actions"],
+              "query": [{ "key": "user_id", "value": "user123" }]
+            }
+          }
+        },
+        {
+          "name": "Get Task History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/api/tasks/:instanceId/history",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "tasks", ":instanceId", "history"]
+            }
+          }
+        },
+        {
+          "name": "Get Tasks Assigned to User",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/api/tasks/user?user_id=user123",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "tasks", "user"],
+              "query": [{ "key": "user_id", "value": "user123" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Workflow Task Queries",
+      "item": [
+        {
+          "name": "Get Tasks by Workflow",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/api/workflows/:workflowId/tasks",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "workflows", ":workflowId", "tasks"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
